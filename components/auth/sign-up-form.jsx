@@ -132,7 +132,7 @@ const SignUpForm = ({ searchParams }) => {
         try {
             setIsLoading(true)
             
-            const response = await fetch(`http://127.0.0.1:4000/api/auth/register`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/register`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
