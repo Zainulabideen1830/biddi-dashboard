@@ -2,6 +2,7 @@ import { Icon } from '@iconify/react'
 import Image from 'next/image'
 import Link from 'next/link'
 import React from 'react'
+import { SignUpStepper } from '@/components/auth/sign-up-stepper'
 
 const AuthOnboardingLayout = ({ children }) => {
     return (
@@ -74,7 +75,8 @@ const AuthOnboardingLayout = ({ children }) => {
             </div>
             <div className='overflow-y-auto col-span-6 2xl:col-span-7 max-h-screen'>
                 <div className='text-[#475569] w-full h-full'>
-                    <div className='w-full h-full'>
+                    <div className='w-full h-full pt-8'>
+                        <SignUpStepper />
                         {children}
                     </div>
                 </div>

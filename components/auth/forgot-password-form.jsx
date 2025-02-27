@@ -26,6 +26,9 @@ const FormSchema = z.object({
 
 const ForgotPasswordForm = () => {
     const [isLoading, setIsLoading] = useState(false)
+    const [resetUrl, setResetUrl] = useState(null)
+    const [showResetLink, setShowResetLink] = useState(false)
+    const [userEmail, setUserEmail] = useState("");
     const form = useForm({
         resolver: zodResolver(FormSchema),
         defaultValues: {
@@ -51,6 +54,9 @@ const ForgotPasswordForm = () => {
                 throw new Error(result.error || 'Failed to send reset link')
             }
 
+            setResetUrl(result.resetUrl)
+            setShowResetLink(true)
+            setUserEmail(data.email)
             toast.success('If an account exists with this email, you will receive a password reset link')
             form.reset()
         } catch (error) {
@@ -58,6 +64,29 @@ const ForgotPasswordForm = () => {
         } finally {
             setIsLoading(false)
         }
+    }
+
+
+    if (showResetLink) {
+        return (
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
+                {resetUrl && (
+                    <div className="text-sm mb-5">
+                        <Link
+                            href={resetUrl}
+                            target="_blank"
+                            className="text-red-700 hover:underline mb-9 italic"
+                        >
+                            During the development phase, please click here to reset your password
+                        </Link>
+                    </div>
+                )}
+                <p className="text-sm text-blue-700">
+                    A password reset link has been sent to <strong>{userEmail}</strong>
+                    . Please check your inbox and click the reset link.
+                </p>
+            </div>
+        )
     }
 
     return (

@@ -52,6 +52,10 @@ const PaymentForm = () => {
     const router = useRouter()
 
     const { user, isLoading: isAuthLoading } = useAuthStore();
+    // if user is not logged in, redirect to login page
+    // if (!user) {
+    //     router.push('/auth/sign-in')
+    // }
     if (user?.hasCompanyInfo && !isAuthLoading && user.subscription_status !== null) {
         router.push('/dashboard')
     }
@@ -66,7 +70,7 @@ const PaymentForm = () => {
 
                 if (!data.user?.hasCompanyInfo) {
                     // router.replace('/auth/company-info')
-                    router.push('/onboarding/company-info')
+                    router.push('/auth/company-info')
                 }
             } catch (error) {
                 console.error('Error checking company info:', error)
@@ -118,9 +122,9 @@ const PaymentForm = () => {
         return basePrice + (additionalUsers * additionalUserPrice)
     }
 
-    if (isAuthLoading) {
-        return <Loader />
-    }
+    // if (isAuthLoading) {
+    //     return <Loader />
+    // }
 
     return (
         <Form {...form}>

@@ -4,11 +4,9 @@ import React from 'react'
 
 const PaymentPage = () => {
     return (
-        <div className='w-full h-full'>
-            <div className='w-[90%] max-w-xl mx-auto py-10'>
-                <AuthTitle title='Payment' />
-                <PaymentForm />
-            </div>
+        <div className='w-[90%] max-w-xl mx-auto py-10'>
+            <AuthTitle title='Payment' />
+            <PaymentForm />
         </div>
     )
 }

@@ -7,7 +7,9 @@
 @layer base {
   :root {
 
-    --background: 0 0% 100%;
+    --background: 0 0% 97%; /* hsla(0, 0%, 97%, 1) */
+
+    --background-secondary: 216 89% 7%; /* hsla(216, 89%, 7%, 1) */
 
     --foreground: 240 10% 3.9%;
 
@@ -56,11 +58,26 @@
 
     --chart-5: 27 87% 67%;
 
-    --radius: 0.5rem
-  }
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%}
   .dark {
 
-    --background: 240 10% 3.9%;
+    --background: 216 86% 9%;
 
     --foreground: 0 0% 98%;
 
@@ -84,7 +101,7 @@
 
     --muted: 240 3.7% 15.9%;
 
-    --muted-foreground: 240 5% 64.9%;
+    --muted-foreground: 207, 28%, 61%;
 
     --accent: 240 3.7% 15.9%;
 
@@ -108,29 +125,24 @@
 
     --chart-4: 280 65% 60%;
 
-    --chart-5: 340 75% 55%
-  }
+    --chart-5: 340 75% 55%;
+
+    --sidebar-background: 216 87% 7%;
+
+    --sidebar-foreground: 240 4.8% 95.9%;
+
+    --sidebar-primary: 224.3 76.3% 48%;
+
+    --sidebar-primary-foreground: 0 0% 100%;
+
+    --sidebar-accent: 216 88% 9%;  /*hsla(216, 88%, 9%, 1)*/
+
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+
+    --sidebar-border: 240 3.7% 15.9%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%}
 }
-
-
-
-@layer base {
-  /* * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  } */
-  .custom_container {
-    @apply w-[90%] max-w-7xl mx-auto
-  }
-}
-
-
-
-/* ---break---*/
-
-
 
 @layer base {
   * {
@@ -138,5 +150,15 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  .custom_container {
+    @apply w-[91%] max-w-7xl mx-auto
+  }
+  /* ---gradient---*/
+  .active-gradient-primary {
+    @apply bg-gradient-to-r from-primary-base to-secondary-base text-white hover:bg-gradient-to-r hover:from-primary-base/80 hover:to-secondary-base/80 hover:!text-white
+  }
+  .gradient-secondary {
+    @apply bg-gradient-to-r from-secondary-base to-primary-base
   }
 }

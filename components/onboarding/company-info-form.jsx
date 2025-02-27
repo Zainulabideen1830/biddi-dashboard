@@ -35,11 +35,16 @@ const CompanyInfoForm = () => {
 
     console.log('[company info] user: ', user);
 
+    // if user is not logged in, redirect to login page
+    // if (!user) {
+    //     router.push('/auth/sign-in')
+    // }
+
     if (user?.hasCompanyInfo && !isAuthLoading && user.subscription_status !== null) {
         router.push('/dashboard')
     }
     if (user?.hasCompanyInfo && !isAuthLoading) {
-        router.push('/onboarding/payment')
+        router.push('/auth/payment')
     }
 
     const form = useForm({
@@ -69,7 +74,7 @@ const CompanyInfoForm = () => {
             }
 
             toast.success('Company information saved successfully')
-            router.push('/onboarding/payment')
+            router.push('/auth/payment')
         } catch (error) {
             toast.error(error.message || 'Something went wrong')
         } finally {
@@ -77,9 +82,9 @@ const CompanyInfoForm = () => {
         }
     }
 
-    if (isAuthLoading) {
-        return <Loader />
-    }
+    // if (isAuthLoading) {
+    //     return <Loader />
+    // }
 
     return (
         <Form {...form}>

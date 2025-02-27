@@ -11,6 +11,8 @@ const buttonVariants = cva(
       variant: {
         default:
           "bg-gradient-to-r from-primary-base to-secondary-base text-primary-foreground shadow hover:bg-primary/90",
+        primary:
+          "bg-gradient-to-r from-[#1D63CC] to-[#018CC3] text-primary-foreground shadow hover:bg-primary/90",
         destructive:
           "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
         outline:
@@ -24,6 +26,7 @@ const buttonVariants = cva(
         default: "h-9 px-4 py-5",
         sm: "h-8 rounded-md px-3 text-xs",
         lg: "h-10 rounded-md px-8",
+        xl: "h-11 rounded-md px-4",
         icon: "h-9 w-9",
       },
     },

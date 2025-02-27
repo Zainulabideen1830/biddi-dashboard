@@ -1,12 +1,10 @@
-'use client'
-
-import AuthOnboardingLayout from "@/components/layouts/auth-onboarding-layout";
 import RequireAuth from "@/components/auth/require-auth";
+import AuthOnboardingLayout from "@/components/layouts/auth-onboarding-layout";
 
-export default function OnboardingLayout({ children }) {
+export default function SignUpLayout({ children }) {
     return (
         <RequireAuth>
             <AuthOnboardingLayout>{children}</AuthOnboardingLayout>
         </RequireAuth>
-    );
+    )
 }

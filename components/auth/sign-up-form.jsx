@@ -18,6 +18,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
+import { useAuthStore } from "@/store/auth-store";
 
 const FormSchema = z
   .object({
@@ -37,7 +38,8 @@ const FormSchema = z
     path: ["confirmPassword"],
   });
 
-const SignUpForm = ({ searchParams }) => {
+const SignUpForm = ({ token }) => {
+  const { setUser } = useAuthStore();
   const form = useForm({
     resolver: zodResolver(FormSchema),
     defaultValues: {
@@ -68,39 +70,44 @@ const SignUpForm = ({ searchParams }) => {
     };
   }, [countdown, showVerification]);
 
-  // Verification check effect
-  // useEffect(() => {
-  //     let checkInterval
-  //     if (showVerification && userEmail) {
-  //         const checkVerification = async () => {
-  //             try {
-  //                 const response = await fetch(
-  //                     `${process.env.NEXT_PUBLIC_API_URL}/api/auth/check-verification?email=${encodeURIComponent(userEmail)}`,
-  //                     {
-  //                         credentials: 'include'
-  //                     }
-  //                 )
+  // Handle token verification on component mount
+  useEffect(() => {
+    const verifyToken = async (token) => {
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/auth/verify-email?token=${token}`,
+          {
+            credentials: 'include'
+          }
+        );
 
-  //                 const data = await response.json()
+        const data = await response.json();
 
-  //                 if (data.isVerified) {
-  //                     setIsVerified(true)
-  //                     toast.success("Email verified successfully!")
-  //                     setTimeout(() => {
-  //                         router.push('/auth/company-info')
-  //                     }, 2000)
-  //                 }
-  //             } catch (error) {
-  //                 console.error('Verification check error:', error)
-  //             }
-  //         }
+        if (!response.ok) {
+          throw new Error(data.error || 'Verification failed');
+        }
 
-  //         checkInterval = setInterval(checkVerification, 3000)
-  //     }
-  //     return () => {
-  //         if (checkInterval) clearInterval(checkInterval)
-  //     }
-  // }, [showVerification, userEmail, router])
+        // Update auth store with user data
+        setUser(data.user);
+        setIsVerified(true);
+        toast.success('Email verified successfully!');
+
+        // Redirect to company info page after a short delay
+        setTimeout(() => {
+          router.push('/auth/company-info');
+        }, 1000);
+
+      } catch (error) {
+        toast.error(error.message || 'Verification failed');
+        console.error('Verification error:', error);
+      }
+    };
+
+    // Check for verification token in URL
+    if (token) {
+      verifyToken(token);
+    }
+  }, [token, router]);
 
   async function resend() {
     try {
@@ -201,15 +208,15 @@ const SignUpForm = ({ searchParams }) => {
             {verificationUrl && (
               <div className="text-sm mb-5">
 
-              <Link
-                href={verificationUrl}
-                target="_blank"
-                className="text-red-700 hover:underline mb-9 italic"
+                <Link
+                  href={verificationUrl}
+                  target="_blank"
+                  className="text-red-700 hover:underline mb-9 italic"
                 >
-                During the development phase, please click here to verify your
-                email
-              </Link>
-                  </div>
+                  During the development phase, please click here to verify your
+                  email
+                </Link>
+              </div>
             )}
             <p className="text-sm text-blue-700">
               A verification email has been sent to <strong>{userEmail}</strong>

@@ -88,7 +88,7 @@ const SignInForm = () => {
             }
             
             // Get return URL from query params or default to dashboard
-            const returnUrl = searchParams.get('returnUrl') || '/onboarding/company-info'
+            const returnUrl = searchParams.get('returnUrl') || '/auth/company-info'
             
             toast.success('Signed in successfully!')
             form.reset()
