@@ -28,14 +28,6 @@ export function SignUpStepper() {
                 <ol className="flex items-center">
                     {steps.map((step, index) => (
                         <li key={step.id} className={`relative flex-1`}>
-                            {/* {index !== steps.length - 1 && (
-                                <div className="absolute top-4 w-full h-0.5 order-2 border-green-500" aria-hidden="true">
-                                    <div
-                                        className={`h-full transition-all duration-300 ${index < currentStep ? 'bg-primary' : 'bg-gray-200'
-                                            }`}
-                                    />
-                                </div>
-                            )} */}
                             <div className={cn("relative flex flex-col group", index === 1 ? "items-center" : index === 2 ? "items-end" : "items-start")}>
                                 <div className="flex flex-col items-center">
                                     <span className="flex items-center">

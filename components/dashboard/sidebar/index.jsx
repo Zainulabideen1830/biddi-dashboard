@@ -30,7 +30,7 @@ import SidebarLogout from "./sidebar-logout"
 const DashboardSidebar = ({ session, ...props }) => {
 
   return (
-    <Sidebar collapsible="icon" {...props}>
+    <Sidebar {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -64,9 +64,10 @@ const DashboardSidebar = ({ session, ...props }) => {
                     defaultOpen={item.isActive}
                     className="group/collapsible"
                   >
-                    <SidebarMenuItem>
+                    <SidebarMenuItem className="px-4 relative">
+                      {item.isActive && <div className="absolute left-0 h-full w-[5px] bg-blue-500 rounded-tr-[5px] rounded-br-[5px]" />}
                       <CollapsibleTrigger asChild>
-                        <SidebarMenuButton tooltip={item.title} className="py-5">
+                        <SidebarMenuButton tooltip={item.title} className="py-6 pl-3 rounded-[10px]">
                           {item.icon && <item.icon />}
                           <span>{item.title}</span>
                           <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
@@ -76,7 +77,7 @@ const DashboardSidebar = ({ session, ...props }) => {
                         <SidebarMenuSub>
                           {item.items?.map((subItem) => (
                             <SidebarMenuSubItem key={subItem.title}>
-                              <SidebarMenuSubButton asChild className="py-4">
+                              <SidebarMenuSubButton asChild className="py-5">
                                 <Link href={subItem.url}>
                                   <span>{subItem.title}</span>
                                 </Link>
@@ -88,9 +89,11 @@ const DashboardSidebar = ({ session, ...props }) => {
                     </SidebarMenuItem>
                   </Collapsible>
                 ) : (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild className={cn(
-                      item.isActive && "active-gradient-primary py-5"
+                  <SidebarMenuItem key={item.title} className="px-4 relative">
+                    {/* a vertical line on the left side if the item is active */}
+                    {item.isActive && <div className="absolute left-0 h-full w-[5px] bg-blue-500 rounded-tr-[5px] rounded-br-[5px]" />}
+                    <SidebarMenuButton asChild className={cn("py-6 pl-3 rounded-[10px]",
+                      item.isActive && "active-gradient-primary"
                     )}>
                       <Link href={item.url}>
                         {item.icon && <item.icon />}
@@ -102,13 +105,13 @@ const DashboardSidebar = ({ session, ...props }) => {
               })}
             </SidebarMenu>
           </SidebarGroupContent>
-        </SidebarGroup>
+      </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
         {/* Logout button */}
         <SidebarLogout />
       </SidebarFooter>
-      <SidebarRail />
+      <SidebarRail className="!hidden" />
     </Sidebar>
   )
 }

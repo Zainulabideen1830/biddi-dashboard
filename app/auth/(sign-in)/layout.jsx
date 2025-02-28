@@ -1,9 +1,16 @@
+'use client'
+
+import { useTheme } from "next-themes";
 import Image from "next/image";
-import React from "react";
+import React, { useEffect } from "react";
 
 const AuthLayout = ({ children }) => {
+  const { setTheme } = useTheme()
+  useEffect(() => {
+    setTheme('light')
+  }, [])
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 h-screen max-h-screen bg-white">
+    <div className="grid grid-cols-1 md:grid-cols-2 h-screen max-h-screen">
       <div className="overflow-y-auto py-10 flex items-center">
         <div className="w-[90%] max-w-md mx-auto text-[#475569] px-1">
           {children}

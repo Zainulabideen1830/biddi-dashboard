@@ -1,12 +1,20 @@
+'use client'
+
 import { Icon } from '@iconify/react'
 import Image from 'next/image'
 import Link from 'next/link'
-import React from 'react'
+import React, { useEffect } from 'react'
 import { SignUpStepper } from '@/components/auth/sign-up-stepper'
+import { useTheme } from "next-themes";
 
 const AuthOnboardingLayout = ({ children }) => {
+    const { setTheme } = useTheme();
+    //set the theme to always be light for this layout only
+    useEffect(() => {
+        setTheme('light');
+    }, []);
     return (
-        <div className='grid grid-cols-1 md:grid-cols-12 h-screen max-h-screen'>
+        <div className='grid grid-cols-1 md:grid-cols-12 h-screen max-h-screen !bg-background'>
             <div className='hidden md:block w-full h-full max-h-screen relative col-span-6 2xl:col-span-5'>
                 <div
                     className='absolute inset-0 mix-blend-multiply'
@@ -73,16 +81,12 @@ const AuthOnboardingLayout = ({ children }) => {
                     className='w-full h-full object-cover object-[25%_75%]'
                 />
             </div>
-            <div className='overflow-y-auto col-span-6 2xl:col-span-7 max-h-screen'>
-                <div className='text-[#475569] w-full h-full'>
-                    <div className='w-full h-full pt-8 flex flex-col justify-center'>
-                        <SignUpStepper />
-                        {children}
-                    </div>
-                </div>
+            <div className='overflow-y-auto col-span-6 2xl:col-span-7 text-[#475569] w-full py-10 3xl:py-20'>
+                <SignUpStepper />
+                {children}
             </div>
         </div>
     )
-} 
+}
 
 export default AuthOnboardingLayout
