@@ -75,7 +75,7 @@ const AuthOnboardingLayout = ({ children }) => {
             </div>
             <div className='overflow-y-auto col-span-6 2xl:col-span-7 max-h-screen'>
                 <div className='text-[#475569] w-full h-full'>
-                    <div className='w-full h-full pt-8'>
+                    <div className='w-full h-full pt-8 flex flex-col justify-center'>
                         <SignUpStepper />
                         {children}
                     </div>

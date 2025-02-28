@@ -19,6 +19,7 @@ import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { useAuthStore } from "@/store/auth-store";
+import { useTheme } from "next-themes";
 
 const FormSchema = z
   .object({
@@ -40,6 +41,7 @@ const FormSchema = z
 
 const SignUpForm = ({ token }) => {
   const { setUser } = useAuthStore();
+  const { setTheme } = useTheme();
   const form = useForm({
     resolver: zodResolver(FormSchema),
     defaultValues: {
@@ -108,6 +110,11 @@ const SignUpForm = ({ token }) => {
       verifyToken(token);
     }
   }, [token, router]);
+
+  // Set theme to light on component mount
+  useEffect(() => {
+    setTheme("light");
+  }, []);
 
   async function resend() {
     try {

@@ -19,6 +19,7 @@ import { Loader2 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { toast } from "react-toastify"
 import { useAuthStore } from "@/store/auth-store"
+import { useTheme } from "next-themes";
 
 const FormSchema = z.object({
     email: z.string().email({
@@ -35,6 +36,7 @@ const SignInForm = () => {
     const [isLoading, setIsLoading] = useState(false)
 
     const { user, isAuthenticated, checkAuth, setUser } = useAuthStore()
+    const { setTheme } = useTheme();
     
     // Add effect to check auth status on mount
     useEffect(() => {
@@ -49,6 +51,11 @@ const SignInForm = () => {
             router.push(returnUrl)
         }
     }, [isAuthenticated, user])
+
+    // Set theme to light on component mount
+    useEffect(() => {
+        setTheme("light");
+    }, []);
 
     const form = useForm({
         resolver: zodResolver(FormSchema),
