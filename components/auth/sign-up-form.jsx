@@ -19,7 +19,6 @@ import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { useAuthStore } from "@/store/auth-store";
-import { useTheme } from "next-themes";
 
 const FormSchema = z
   .object({
@@ -28,6 +27,9 @@ const FormSchema = z
     }),
     email: z.string().email({
       message: "Invalid email address.",
+    }),
+    phone: z.string().min(10, {
+      message: "Phone number must be at least 10 characters.",
     }),
     password: z.string().min(8, {
       message: "Password must be at least 8 characters.",
@@ -41,12 +43,12 @@ const FormSchema = z
 
 const SignUpForm = ({ token }) => {
   const { setUser } = useAuthStore();
-  const { setTheme } = useTheme();
   const form = useForm({
     resolver: zodResolver(FormSchema),
     defaultValues: {
       name: "",
       email: "",
+      phone: "",
       password: "",
       confirmPassword: "",
     },
@@ -111,11 +113,6 @@ const SignUpForm = ({ token }) => {
     }
   }, [token, router]);
 
-  // Set theme to light on component mount
-  useEffect(() => {
-    setTheme("light");
-  }, []);
-
   async function resend() {
     try {
       setIsResending(true);
@@ -167,6 +164,7 @@ const SignUpForm = ({ token }) => {
             name: data.name,
             email: data.email,
             password: data.password,
+            phone: data.phone,
           }),
         }
       );
@@ -217,7 +215,7 @@ const SignUpForm = ({ token }) => {
 
                 <Link
                   href={verificationUrl}
-                  target="_blank"
+                  // target="_blank"
                   className="text-red-700 hover:underline mb-9 italic"
                 >
                   During the development phase, please click here to verify your
@@ -269,27 +267,42 @@ const SignUpForm = ({ token }) => {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div className="grid grid-cols-1 3xl:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Full Name</FormLabel>
+                <FormControl>
+                  <Input {...field} className="bg-white" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email Address</FormLabel>
+                <FormControl>
+                  <Input {...field} className="bg-white" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
         <FormField
           control={form.control}
-          name="name"
+          name="phone"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Full Name</FormLabel>
+              <FormLabel>Phone Number</FormLabel>
               <FormControl>
-                <Input placeholder="John Doe" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email Address</FormLabel>
-              <FormControl>
-                <Input placeholder="john@example.com" {...field} />
+                <Input {...field} className="bg-white" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -302,7 +315,7 @@ const SignUpForm = ({ token }) => {
             <FormItem>
               <FormLabel>Password</FormLabel>
               <FormControl>
-                <Input type="password" {...field} />
+                <Input type="password" {...field} className="bg-white" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -315,7 +328,7 @@ const SignUpForm = ({ token }) => {
             <FormItem>
               <FormLabel>Confirm Password</FormLabel>
               <FormControl>
-                <Input type="password" {...field} />
+                <Input type="password" {...field} className="bg-white" />
               </FormControl>
               <FormMessage />
             </FormItem>

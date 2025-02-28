@@ -152,7 +152,7 @@
     @apply bg-background text-foreground;
   }
   .custom_container {
-    @apply w-[91%] max-w-7xl mx-auto
+    @apply max-w-[1350px] px-5 md:px-10 2xl:px-14
   }
   /* ---gradient---*/
   .active-gradient-primary {

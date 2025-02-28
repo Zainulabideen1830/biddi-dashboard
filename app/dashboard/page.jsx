@@ -63,21 +63,20 @@ const DashboardPage = () => {
 
       <div className='custom_container'>
         <p className="text-[#809FB8] mt-3 mb-5">Shortcuts</p>
-        {/* create buttons row with 4 buttons */}
         <div className="flex items-center flex-wrap gap-4">
-          <Button variant="primary" size="xl" className="2xl:text-base">
+          <Button variant="primary" size="xl" className="shadow-sm hover:shadow-md hover:scale-105 transition-all duration-300">
             <Plus className="size-4 dark:text-white" />
             <span className='text-white dark:text-white'>Start New Bid</span>
           </Button>
-          <Button variant="primary" size="xl" className="2xl:text-base">
+          <Button variant="primary" size="xl" className="shadow-sm hover:shadow-md hover:scale-105 transition-all duration-300">
             <Plus className="size-4 dark:text-white" />
             <span className='text-white dark:text-white'>Add Product / Service</span>
           </Button>
-          <Button variant="primary" size="xl" className="2xl:text-base">
+          <Button variant="primary" size="xl" className="shadow-sm hover:shadow-md hover:scale-105 transition-all duration-300">
             <Plus className="size-4 dark:text-white" />
             <span className='text-white dark:text-white'>Edit Company Info</span>
           </Button>
-          <Button variant="primary" size="xl" className="2xl:text-base">
+          <Button variant="primary" size="xl" className="shadow-sm hover:shadow-md hover:scale-105 transition-all duration-300">
             <Plus className="size-4 dark:text-white" />
             <span className='text-white dark:text-white'>Add Overhead Expense</span>
           </Button>

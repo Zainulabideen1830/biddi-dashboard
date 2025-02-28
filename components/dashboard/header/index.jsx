@@ -2,21 +2,18 @@ import { SidebarTrigger } from '@/components/ui/sidebar'
 import { ModeToggle } from './theme-toggle'
 import { Bell, Calendar, ChevronDown, HelpCircle, Search, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import SearchInput from './search-input'
+import UserProfile from './user-profiel'
 
 const DashboardHeader = () => {
   return (
-    <header className=" bg-sidebar flex items-center h-[70px] shrink-0 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-16">
-      <div className='custom_container flex items-center justify-between'>
-        <div className="flex items-center gap-2">
+    <header className="bg-sidebar flex items-center h-[70px] shrink-0 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-16 sticky top-0 z-10">
+      <div className='custom_container flex items-center justify-between w-full'>
+        <div className="flex items-center gap-2 flex-1">
           <SidebarTrigger className="-ml-1" />
+          <SearchInput />
         </div>
-        <div className="flex items-center gap-4">
-          {/* Search button icon */}
-          <Button variant="ghost" size="icon">
-            <Search className="size-5 text-muted-foreground" />
-          </Button>
+        <div className="flex items-center gap-2 sm:gap-4">
           {/* chat notification icon button */}
           <Button variant="ghost" size="icon" className='relative'>
             <Bell className="size-5 text-muted-foreground" />
@@ -28,25 +25,7 @@ const DashboardHeader = () => {
             <HelpCircle className="size-5 text-muted-foreground" />
           </Button>
           {/* dropdown menu for user profile */}
-          <DropdownMenu className='text-sm'>
-            <DropdownMenuTrigger asChild className=''>
-              <Button variant="ghost" className="bg-white dark:bg-backgroundSecondary !outline-none focus:!outline-none px-1">
-                <Avatar className='w-8 h-8'>
-                  <AvatarImage src="https://github.com/shadcn.png" />
-                  <AvatarFallback>CN</AvatarFallback>
-                </Avatar>
-                <span className='text-muted-foreground'>John Doe</span>
-                <ChevronDown className="size-4 text-muted-foreground" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem>
-                <User className="size-5" />
-                <span>Profile</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          
+          <UserProfile />
           <ModeToggle />
         </div>
       </div>

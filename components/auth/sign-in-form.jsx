@@ -19,7 +19,6 @@ import { Loader2 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { toast } from "react-toastify"
 import { useAuthStore } from "@/store/auth-store"
-import { useTheme } from "next-themes";
 
 const FormSchema = z.object({
     email: z.string().email({
@@ -36,12 +35,6 @@ const SignInForm = () => {
     const [isLoading, setIsLoading] = useState(false)
 
     const { user, isAuthenticated, checkAuth, setUser } = useAuthStore()
-    const { setTheme } = useTheme();
-    
-    // Add effect to check auth status on mount
-    useEffect(() => {
-        checkAuth()
-    }, [])
     
     // Add effect to redirect if already authenticated
     useEffect(() => {
@@ -51,11 +44,6 @@ const SignInForm = () => {
             router.push(returnUrl)
         }
     }, [isAuthenticated, user])
-
-    // Set theme to light on component mount
-    useEffect(() => {
-        setTheme("light");
-    }, []);
 
     const form = useForm({
         resolver: zodResolver(FormSchema),
@@ -127,9 +115,9 @@ const SignInForm = () => {
                             <FormControl>
                                 <Input 
                                     type="email" 
-                                    placeholder="Enter your email" 
                                     {...field} 
                                     disabled={isLoading}
+                                    className="bg-white"
                                 />
                             </FormControl>
                             <FormMessage />
@@ -145,9 +133,9 @@ const SignInForm = () => {
                             <FormControl>
                                 <Input 
                                     type="password" 
-                                    placeholder="Enter your password" 
                                     {...field} 
                                     disabled={isLoading}
+                                    className="bg-white"
                                 />
                             </FormControl>
                             <FormMessage />
@@ -157,7 +145,7 @@ const SignInForm = () => {
                 <div className="flex items-center justify-between">
                     <Link
                         href="/auth/forgot-password"
-                        className="text-sm text-primary hover:underline"
+                        className="text-sm underline"
                         tabIndex={isLoading ? -1 : 0}
                     >
                         Forgot Password?
@@ -173,7 +161,7 @@ const SignInForm = () => {
                         )}
                     </Button>
                 </div>
-                <div className="text-sm text-center">
+                <div className="text-sm">
                     Don't have an account?{" "}
                     <Link 
                         href="/auth/sign-up" 
