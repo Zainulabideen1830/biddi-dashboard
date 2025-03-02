@@ -1,28 +1,27 @@
 'use client'
 
-import { Suspense, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuthStore } from '@/store/auth-store'
-import RequireAuth from '@/components/auth/require-auth'
+import { Suspense } from 'react'
+import DashboardGuard from '@/components/auth/dashboard-guard'
 import Loader from '@/components/shared/loader'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import DashboardHeader from '@/components/dashboard/header'
 import DashboardSidebar from '@/components/dashboard/sidebar'
+
 const DashboardLayout = ({ children }) => {
   return (
-    <RequireAuth>
+    <DashboardGuard>
       <SidebarProvider>
         <DashboardSidebar />
         <SidebarInset>
           <DashboardHeader />
-          <main className='overflow-y-auto'>
+          <main className='overflow-y-auto pt-6 pb-20'>
             <Suspense fallback={<Loader />}>
               {children}
             </Suspense>
           </main>
         </SidebarInset>
       </SidebarProvider>
-    </RequireAuth>
+    </DashboardGuard>
   )
 }
 

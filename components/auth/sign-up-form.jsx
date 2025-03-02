@@ -58,6 +58,7 @@ const SignUpForm = ({ token }) => {
   const [showVerification, setShowVerification] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [countdown, setCountdown] = useState(60);
+  const [isVerifying, setIsVerifying] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [verificationUrl, setVerificationUrl] = useState("");
@@ -78,23 +79,30 @@ const SignUpForm = ({ token }) => {
   useEffect(() => {
     const verifyToken = async (token) => {
       try {
+        setIsVerifying(true);
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/api/auth/verify-email?token=${token}`,
           {
-            credentials: 'include'
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ token }),
+            credentials: 'include',
           }
         );
 
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.error || 'Verification failed');
+          throw new Error(data.message || 'Verification failed');
         }
 
         // Update auth store with user data
         setUser(data.user);
         setIsVerified(true);
         toast.success('Email verified successfully!');
+        setIsVerifying(false);
 
         // Redirect to company info page after a short delay
         setTimeout(() => {
@@ -104,6 +112,8 @@ const SignUpForm = ({ token }) => {
       } catch (error) {
         toast.error(error.message || 'Verification failed');
         console.error('Verification error:', error);
+      } finally {
+        setIsVerifying(false);
       }
     };
 
@@ -172,7 +182,7 @@ const SignUpForm = ({ token }) => {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || "Failed to create account");
+        throw new Error(result.message || "Failed to create account");
       }
 
       // Set email for verification UI
@@ -192,19 +202,21 @@ const SignUpForm = ({ token }) => {
     }
   }
 
-  if (isVerified) {
+  // Show verification status if token is present
+  if (isVerifying || isVerified) {
     return (
-      <div className="space-y-6 text-center">
+      <div className="space-y-6 text-center mt-5">
         <div className="space-y-2">
-          <h2 className="text-2xl font-semibold">Email Verified!</h2>
+          <h2 className="text-2xl font-semibold">{isVerified ? "Email Verified!" : "Verifying Email..."}</h2>
           <p className="text-muted-foreground">
-            Redirecting you to the dashboard...
+            {isVerified ? "Redirecting you to the dashboard..." : "Please wait while we verify your email..."}
           </p>
         </div>
-        <Loader2 className="animate-spin mx-auto" />
+        <Loader2 className="animate-spin mx-auto h-8 w-8" />
       </div>
     );
   }
+
   if (showVerification) {
     return (
       <div className="space-y-6">

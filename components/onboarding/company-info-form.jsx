@@ -31,20 +31,26 @@ const FormSchema = z.object({
 
 const CompanyInfoForm = () => {
     const router = useRouter()
-    const { user, isLoading: isAuthLoading } = useAuthStore();
+    const { user, isLoading: isAuthLoading, setUser } = useAuthStore();
 
-    console.log('[company info] user: ', user);
+    // Get the actual user object, handling both flat and nested structures
+    const actualUser = user?.user ? user.user : user
 
-    // if user is not logged in, redirect to login page
-    // if (!user) {
-    //     router.push('/auth/sign-in')
-    // }
-
-    if (user?.hasCompanyInfo && !isAuthLoading && user.subscription_status !== null) {
-        router.push('/dashboard')
+    // Helper function to check if user has an active subscription
+    const hasActiveSubscription = () => {
+        return actualUser?.subscription_status === 'ACTIVE';
     }
-    if (user?.hasCompanyInfo && !isAuthLoading) {
-        router.push('/auth/payment')
+
+    // Helper function to check if user has company info
+    const hasCompanyInfo = () => {
+        return !!actualUser?.has_company_info;
+    }
+
+    // Only redirect to dashboard if user has completed the entire onboarding process
+    // (both company info and subscription are set)
+    if (hasCompanyInfo() && hasActiveSubscription() && !isAuthLoading) {
+        router.push('/dashboard')
+        return null; // Return null to prevent rendering the form
     }
 
     const form = useForm({
@@ -73,6 +79,13 @@ const CompanyInfoForm = () => {
                 throw new Error('Failed to save company information')
             }
 
+            const result = await response.json()
+
+            // Update the user state with the updated user data
+            if (result.user) {
+                setUser(result.user)
+            }
+
             toast.success('Company information saved successfully')
             router.push('/auth/payment')
         } catch (error) {
@@ -82,9 +95,9 @@ const CompanyInfoForm = () => {
         }
     }
 
-    // if (isAuthLoading) {
-    //     return <Loader />
-    // }
+    if (isAuthLoading) {
+        return <Loader />
+    }
 
     return (
         <Form {...form}>

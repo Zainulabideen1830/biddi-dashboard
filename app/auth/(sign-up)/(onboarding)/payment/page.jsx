@@ -1,3 +1,4 @@
+//app/auth/(sign-up)/(onboarding)/payment/page.jsx
 import AuthTitle from '@/components/auth/auth-title'
 import PaymentForm from '@/components/onboarding/payment-form'
 import React from 'react'

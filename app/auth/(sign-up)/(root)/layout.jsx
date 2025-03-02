@@ -1,5 +1,10 @@
 import AuthOnboardingLayout from "@/components/layouts/auth-onboarding-layout";
+import AuthGuard from "@/components/auth/auth-guard";
 
 export default function SignUpLayout({ children }) {
-    return <AuthOnboardingLayout>{children}</AuthOnboardingLayout>
+    return (
+        <AuthGuard requireNoAuth>
+            <AuthOnboardingLayout>{children}</AuthOnboardingLayout>
+        </AuthGuard>
+    )
 }
