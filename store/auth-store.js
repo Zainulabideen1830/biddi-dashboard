@@ -145,6 +145,10 @@ export const useAuthStore = create(
       
       logout: async () => {
         try {
+          // Set loading state
+          set({ isLoading: true });
+          
+          // Then attempt to logout on the server
           const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/logout`, {
             method: 'POST',
             headers: {
@@ -155,30 +159,40 @@ export const useAuthStore = create(
           });
 
           if (!response.ok) {
-            throw new Error('Failed to sign out');
+            console.error('Server logout failed, but continuing with client logout');
           }
 
-          // Clear the auth store state
           set({ 
             user: null, 
             isAuthenticated: false, 
             error: null 
           });
 
-          // Clear all storage
-          sessionStorage.clear(); // Clear all sessionStorage, not just auth-storage
-          localStorage.clear(); // Clear localStorage as well if you're using it
-
-          // Force clear cookies from the client side as well
-          document.cookie.split(";").forEach((c) => {
-            document.cookie = c
-              .replace(/^ +/, "")
-              .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-          });
-
+          // Clear all storage regardless of server response
+          if (typeof window !== 'undefined') {
+            sessionStorage.clear();
+            localStorage.clear();
+            
+            // Force clear cookies from the client side as well
+            document.cookie.split(";").forEach((c) => {
+              document.cookie = c
+                .replace(/^ +/, "")
+                .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+            });
+          }
+          
+          return true;
         } catch (error) {
           console.error('Logout error:', error);
-          throw error;
+          // Still clear the state even if there's an error
+          set({ 
+            user: null, 
+            isAuthenticated: false, 
+            error: 'Logout failed, but session was cleared locally' 
+          });
+          return false;
+        } finally {
+          set({ isLoading: false });
         }
       },
 

@@ -10,24 +10,40 @@ import { toast } from 'react-toastify';
 const SignOutButton = () => {
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
-    const { clearUser, logout } = useAuthStore();
+    const { logout } = useAuthStore();
 
     const handleSignOut = async () => {
         try {
+            // Prevent multiple clicks
+            if (isLoading) return;
+            
             setIsLoading(true);
             
-            await logout();
+            // Call the logout function from auth store
+            const success = await logout();
             
-            // Force a complete page reload and redirect
+            // Clear any client-side cookies
+            document.cookie.split(";").forEach((c) => {
+                document.cookie = c
+                    .replace(/^ +/, "")
+                    .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+            });
+            
+            // Clear storage
             if (typeof window !== 'undefined') {
-                // Clear any query parameters and force reload
-                window.location.replace('/auth/sign-in');
+                sessionStorage.clear();
+                localStorage.clear();
+                
+                // Use a small timeout to ensure state is cleared before redirect
+                setTimeout(() => {
+                    // Force a hard redirect to the sign-in page
+                    window.location.href = '/auth/sign-in';
+                }, 100);
             }
             
         } catch (error) {
-            toast.error(error.message || 'Something went wrong');
+            toast.error('Failed to sign out. Please try again.');
             console.error('Sign out error:', error);
-        } finally {
             setIsLoading(false);
         }
     }

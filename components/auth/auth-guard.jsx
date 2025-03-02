@@ -65,17 +65,27 @@ export default function AuthGuard({
           }
         }
         
+        // Get the latest user data from the store after checkAuth
+        const currentUser = useAuthStore.getState().user
+        const actualCurrentUser = currentUser?.user ? currentUser.user : currentUser
+        
+        // Re-check helper functions with the latest user data
+        const currentHasCompanyInfo = !!actualCurrentUser?.has_company_info
+        const currentHasActiveSubscription = 
+          actualCurrentUser?.subscription_status === 'ACTIVE' || 
+          actualCurrentUser?.subscription_status === 'TRIAL'
+        
         // Now apply the access rules
         
         // Rule 1: If page requires no auth but user is authenticated
         if (requireNoAuth && isAuthenticated) {
           // Redirect based on onboarding status
-          if (!hasCompanyInfo()) {
+          if (!currentHasCompanyInfo) {
             router.replace('/auth/company-info')
             return
           }
           
-          if (!hasActiveSubscription()) {
+          if (!currentHasActiveSubscription) {
             router.replace('/auth/payment')
             return
           }
@@ -86,15 +96,15 @@ export default function AuthGuard({
         }
         
         // Rule 2: If page requires company info but user doesn't have it
-        if (requireCompanyInfo && !hasCompanyInfo()) {
+        if (requireCompanyInfo && !currentHasCompanyInfo) {
           router.replace('/auth/company-info')
           return
         }
         
         // Rule 3: If page requires no company info but user has it
-        if (requireNoCompanyInfo && hasCompanyInfo()) {
+        if (requireNoCompanyInfo && currentHasCompanyInfo) {
           // If they have company info but no subscription, go to payment
-          if (!hasActiveSubscription()) {
+          if (!currentHasActiveSubscription) {
             router.replace('/auth/payment')
             return
           }
@@ -105,13 +115,13 @@ export default function AuthGuard({
         }
         
         // Rule 4: If page requires subscription but user doesn't have it
-        if (requireSubscription && !hasActiveSubscription()) {
+        if (requireSubscription && !currentHasActiveSubscription) {
           router.replace('/auth/payment')
           return
         }
         
         // Rule 5: If page requires no subscription but user has it
-        if (requireNoSubscription && hasActiveSubscription()) {
+        if (requireNoSubscription && currentHasActiveSubscription) {
           router.replace('/dashboard')
           return
         }
