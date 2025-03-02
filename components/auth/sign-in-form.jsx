@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Loader2 } from "lucide-react"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { toast } from "react-toastify"
 import { useAuthStore } from "@/store/auth-store"
 
@@ -34,16 +34,10 @@ const SignInForm = () => {
     const searchParams = useSearchParams()
     const [isLoading, setIsLoading] = useState(false)
 
-    const { user, isAuthenticated, checkAuth, setUser } = useAuthStore()
+    const { setUser, checkAuth } = useAuthStore()
     
-    // Add effect to redirect if already authenticated
-    useEffect(() => {
-        if (isAuthenticated && user) {
-            const returnUrl = searchParams.get('returnUrl') || '/dashboard'
-            // router.replace(returnUrl)
-            router.push(returnUrl)
-        }
-    }, [isAuthenticated, user])
+    // Remove the useEffect that redirects authenticated users
+    // This is now handled by the AuthGuard component
 
     const form = useForm({
         resolver: zodResolver(FormSchema),
@@ -67,9 +61,9 @@ const SignInForm = () => {
             })
     
             const result = await response.json()
-    
+
             if (!response.ok) {
-                throw new Error(result.error || 'Failed to sign in')
+                throw new Error(result.message || 'Failed to sign in')
             }
     
             // Update auth store with user data
@@ -82,14 +76,22 @@ const SignInForm = () => {
                 throw new Error('Failed to verify authentication')
             }
             
-            // Get return URL from query params or default to dashboard
-            const returnUrl = searchParams.get('returnUrl') || '/auth/company-info'
-            
             toast.success('Signed in successfully!')
             form.reset()
+
+            // Redirect based on user onboarding status
+            if (!result.user.has_company_info) {
+                router.push('/auth/company-info')
+                return
+            }
+            
+            if (!result.user.subscription_status || result.user.subscription_status !== 'ACTIVE') {
+                router.push('/auth/payment')
+                return
+            }
     
-            // Use router.push for immediate navigation
-            router.push(returnUrl)
+            // If user has completed onboarding, go to dashboard
+            router.push('/dashboard')
         } catch (error) {
             if (error.message.includes('not verified')) {
                 toast.error('Please verify your email before signing in')

@@ -156,7 +156,7 @@
   }
   /* ---gradient---*/
   .active-gradient-primary {
-    @apply bg-gradient-to-r from-primary-base to-secondary-base text-white hover:bg-gradient-to-r hover:from-primary-base/80 hover:to-secondary-base/80 hover:!text-white
+    @apply bg-gradient-to-r from-primary-base to-secondary-base !text-white hover:!bg-gradient-to-r hover:from-primary-base/80 hover:to-secondary-base/80 hover:!text-white
   }
   .gradient-secondary {
     @apply bg-gradient-to-r from-secondary-base to-primary-base

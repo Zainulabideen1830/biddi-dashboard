@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { usePathname } from "next/navigation"
 
 import {
   Sidebar,
@@ -28,6 +29,52 @@ import { cn } from "@/lib/utils"
 import SidebarLogout from "./sidebar-logout"
 
 const DashboardSidebar = ({ session, ...props }) => {
+  const pathname = usePathname()
+  
+  // Check if a link is active (exact match)
+  const isExactMatch = (url) => {
+    return pathname === url
+  }
+  
+  // Check if a link is active (starts with) but not the dashboard root
+  const isPartialMatch = (url) => {
+    // Skip the check for "#" placeholder URLs
+    if (url === "#") return false
+    
+    // Special case for dashboard root to prevent it from matching all dashboard routes
+    if (url === "/dashboard" && pathname !== "/dashboard") {
+      return false
+    }
+    
+    return pathname.startsWith(url)
+  }
+  
+  // Check if any subitem is active
+  const hasActiveSubItem = (items) => {
+    if (!items) return false
+    return items.some(subItem => {
+      if (subItem.url === "#") return false
+      return isExactMatch(subItem.url) || isPartialMatch(subItem.url)
+    })
+  }
+  
+  // Determine if an item is active
+  const isItemActive = (item) => {
+    // For items with subitems, they're active if any subitem is active
+    if (item.items) {
+      return hasActiveSubItem(item.items)
+    }
+    
+    // For regular items, they're active if they match the current path
+    if (item.url === "#") return false
+    
+    // Special case for dashboard root
+    if (item.url === "/dashboard") {
+      return pathname === "/dashboard"
+    }
+    
+    return isExactMatch(item.url) || isPartialMatch(item.url)
+  }
 
   return (
     <Sidebar {...props}>
@@ -57,17 +104,27 @@ const DashboardSidebar = ({ session, ...props }) => {
                 if (item.type === "separator") {
                   return <SidebarSeparator key={item.type} className="my-4" />
                 }
+                
+                // Determine if this item is active
+                const isActive = isItemActive(item)
+                
                 return item.items ? (
                   <Collapsible
                     key={item.title}
                     asChild
-                    defaultOpen={item.isActive}
+                    defaultOpen={isActive}
                     className="group/collapsible"
                   >
                     <SidebarMenuItem className="px-4 relative">
-                      {item.isActive && <div className="absolute left-0 h-full w-[5px] bg-blue-500 rounded-tr-[5px] rounded-br-[5px]" />}
+                      {isActive && <div className="absolute left-0 h-[50px] w-[5px] bg-blue-500 rounded-tr-[5px] rounded-br-[5px]" />}
                       <CollapsibleTrigger asChild>
-                        <SidebarMenuButton tooltip={item.title} className="py-6 pl-3 rounded-[10px]">
+                        <SidebarMenuButton 
+                          tooltip={item.title} 
+                          className={cn("h-[50px] pl-3 rounded-[10px] transition-all duration-200",
+                            isActive && "active-gradient-primary"
+                          )}
+                          isActive={isActive}
+                        >
                           {item.icon && <item.icon />}
                           <span>{item.title}</span>
                           <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
@@ -75,15 +132,24 @@ const DashboardSidebar = ({ session, ...props }) => {
                       </CollapsibleTrigger>
                       <CollapsibleContent>
                         <SidebarMenuSub>
-                          {item.items?.map((subItem) => (
-                            <SidebarMenuSubItem key={subItem.title}>
-                              <SidebarMenuSubButton asChild className="py-5">
-                                <Link href={subItem.url}>
-                                  <span>{subItem.title}</span>
-                                </Link>
-                              </SidebarMenuSubButton>
-                            </SidebarMenuSubItem>
-                          ))}
+                          {item.items?.map((subItem) => {
+                            const isSubItemActive = subItem.url !== "#" && 
+                              (isExactMatch(subItem.url) || isPartialMatch(subItem.url))
+                            
+                            return (
+                              <SidebarMenuSubItem key={subItem.title}>
+                                <SidebarMenuSubButton 
+                                  asChild 
+                                  className={cn("py-5", isSubItemActive && "!text-secondary-base")}
+                                  isActive={isSubItemActive}
+                                >
+                                  <Link href={subItem.url}>
+                                    <span>{subItem.title}</span>
+                                  </Link>
+                                </SidebarMenuSubButton>
+                              </SidebarMenuSubItem>
+                            )
+                          })}
                         </SidebarMenuSub>
                       </CollapsibleContent>
                     </SidebarMenuItem>
@@ -91,10 +157,14 @@ const DashboardSidebar = ({ session, ...props }) => {
                 ) : (
                   <SidebarMenuItem key={item.title} className="px-4 relative">
                     {/* a vertical line on the left side if the item is active */}
-                    {item.isActive && <div className="absolute left-0 h-full w-[5px] bg-blue-500 rounded-tr-[5px] rounded-br-[5px]" />}
-                    <SidebarMenuButton asChild className={cn("py-6 pl-3 rounded-[10px]",
-                      item.isActive && "active-gradient-primary"
-                    )}>
+                    {isActive && <div className="absolute left-0 h-[50px] w-[5px] bg-blue-500 rounded-tr-[5px] rounded-br-[5px]" />}
+                    <SidebarMenuButton 
+                      asChild 
+                      className={cn("h-[50px] pl-3 rounded-[10px] transition-all duration-200",
+                        isActive && "active-gradient-primary"
+                      )}
+                      isActive={isActive}
+                    >
                       <Link href={item.url}>
                         {item.icon && <item.icon />}
                         <span>{item.title}</span>

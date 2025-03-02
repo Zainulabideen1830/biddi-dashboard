@@ -13,7 +13,6 @@ export const navLinks = [
         title: "Dashboard",
         url: "/dashboard",
         icon: LayoutGrid,
-        isActive: true,
     },
     {
         title: "biddi",
@@ -38,7 +37,7 @@ export const navLinks = [
             },
             {
                 title: "Rules",
-                url: "#",
+                url: "/dashboard/biddi/rules",
             },
             {
                 title: "Companies",
@@ -48,7 +47,7 @@ export const navLinks = [
     },
     {
         title: "Calendar",
-        url: "/dashboard",
+        url: "/dashboard/calendar",
         icon: Calendar,
     },
     {
@@ -58,7 +57,7 @@ export const navLinks = [
         items: [
             {
                 title: "Manage Users",
-                url: "#",
+                url: "/dashboard/settings/users",
             },
         ],
     },
