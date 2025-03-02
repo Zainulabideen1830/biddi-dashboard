@@ -13,7 +13,7 @@ import {
     FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Loader2 } from "lucide-react"
 import { toast } from "react-toastify"
 import { useRouter } from "next/navigation"
@@ -51,36 +51,32 @@ const PaymentForm = () => {
     const [isLoading, setIsLoading] = useState(false)
     const router = useRouter()
 
-    const { user, isLoading: isAuthLoading } = useAuthStore();
-    // if user is not logged in, redirect to login page
-    // if (!user) {
-    //     router.push('/auth/sign-in')
-    // }
-    if (user?.hasCompanyInfo && !isAuthLoading && user.subscription_status !== null) {
-        router.push('/dashboard')
+    const { user, isLoading: isAuthLoading, setUser } = useAuthStore();
+
+    // Get the actual user object, handling both flat and nested structures
+    const actualUser = user?.user ? user.user : user
+
+    // Helper function to check if user has an active subscription
+    const hasActiveSubscription = () => {
+        return actualUser?.subscription_status === 'ACTIVE' || actualUser?.subscription_status === 'TRIAL';
     }
 
-    useEffect(() => {
-        const checkCompanyInfo = async () => {
-            try {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, {
-                    credentials: 'include'
-                })
-                const data = await response.json()
+    // Helper function to check if user has company info
+    const hasCompanyInfo = () => {
+        return !!actualUser?.has_company_info;
+    }
 
-                if (!data.user?.hasCompanyInfo) {
-                    // router.replace('/auth/company-info')
-                    router.push('/auth/company-info')
-                }
-            } catch (error) {
-                console.error('Error checking company info:', error)
-                // router.replace('/auth/sign-in')
-                router.push('/auth/sign-in')
-            }
-        }
+    // Only redirect to dashboard if user has completed the entire onboarding process
+    if (hasCompanyInfo() && hasActiveSubscription() && !isAuthLoading) {
+        router.push('/dashboard')
+        return null; // Return null to prevent rendering the form
+    }
 
-        checkCompanyInfo()
-    }, [])
+    // If user doesn't have company info, they need to complete that step first
+    if (actualUser && !hasCompanyInfo() && !isAuthLoading) {
+        router.push('/auth/company-info')
+        return null; // Return null to prevent rendering the form
+    }
 
     async function onSubmit(data) {
         try {
@@ -92,19 +88,32 @@ const PaymentForm = () => {
                     'Content-Type': 'application/json',
                 },
                 credentials: 'include',
-                body: JSON.stringify(data)
+                body: JSON.stringify({ ...data, plan: data.plan.toUpperCase() })
             })
 
             if (!response.ok) {
                 throw new Error('Failed to process subscription')
             }
 
-            toast.success(data.plan === 'trial' ? 
-                'Free trial activated successfully!' : 
-                'Payment processed successfully!'
-            )
+            const result = await response.json()
 
-            router.push('/dashboard')
+            // Update the user state with the updated user data
+            if (result.user) {
+                setUser(result.user)
+                
+                // Force a small delay to ensure state is updated before redirect
+                // await new Promise(resolve => setTimeout(resolve, 100))
+                
+                toast.success(data.plan === 'trial' ?
+                    'Free trial activated successfully!' :
+                    'Payment processed successfully!'
+                )
+                
+                // Redirect to dashboard
+                router.push('/dashboard')
+            } else {
+                throw new Error('User data not returned from server')
+            }
         } catch (error) {
             toast.error(error.message || 'Something went wrong')
         } finally {
@@ -122,9 +131,9 @@ const PaymentForm = () => {
         return basePrice + (additionalUsers * additionalUserPrice)
     }
 
-    // if (isAuthLoading) {
-    //     return <Loader />
-    // }
+    if (isAuthLoading) {
+        return <Loader />
+    }
 
     return (
         <Form {...form}>
