@@ -85,6 +85,7 @@ export const useAuthStore = create(
       user: null,
       isAuthenticated: false,
       isLoading: false,
+      isLoggingOut: false,
       isRefreshing: false, // Add state for tracking token refresh
       error: null,
       
@@ -146,7 +147,7 @@ export const useAuthStore = create(
       logout: async () => {
         try {
           // Set loading state
-          set({ isLoading: true });
+          set({ isLoggingOut: true });
           
           // Then attempt to logout on the server
           const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/logout`, {
@@ -192,7 +193,7 @@ export const useAuthStore = create(
           });
           return false;
         } finally {
-          set({ isLoading: false });
+          set({ isLoggingOut: false });
         }
       },
 
