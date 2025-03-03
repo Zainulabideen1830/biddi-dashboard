@@ -10,7 +10,7 @@ import { toast } from 'react-toastify';
 const SignOutButton = () => {
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
-    const { logout } = useAuthStore();
+    const { logout, isLoggingOut } = useAuthStore();
 
     const handleSignOut = async () => {
         try {
@@ -50,7 +50,7 @@ const SignOutButton = () => {
 
     return (
         <Button onClick={handleSignOut} className='mt-4' disabled={isLoading}>
-            {isLoading ? (
+            {isLoading || isLoggingOut ? (
                 <>
                     <Loader2 className="mr-1 h-4 w-4 animate-spin" />
                     Signing Out...

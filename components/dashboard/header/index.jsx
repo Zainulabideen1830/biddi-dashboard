@@ -10,7 +10,7 @@ const DashboardHeader = () => {
     <header className={`bg-sidebar flex items-center h-[70px] shrink-0 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-16 sticky top-0 z-10 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05)]`}>
       <div className='custom_container flex items-center justify-between w-full'>
         <div className="flex items-center gap-2 flex-1">
-          <SidebarTrigger className="-ml-1" />
+          <SidebarTrigger className="-ml-1 md:hidden" />
           <SearchInput />
         </div>
         <div className="flex items-center gap-2 sm:gap-4">

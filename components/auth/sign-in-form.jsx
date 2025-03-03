@@ -76,7 +76,7 @@ const SignInForm = () => {
                 throw new Error('Failed to verify authentication')
             }
             
-            toast.success('Signed in successfully!')
+            // toast.success('Signed in successfully!')
             form.reset()
 
             // Redirect based on user onboarding status
