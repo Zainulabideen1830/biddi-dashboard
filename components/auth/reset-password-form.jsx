@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input"
 import { toast } from "react-toastify"
 import { useState, useEffect } from "react"
 import { Loader2 } from "lucide-react"
+import { useApi } from "@/lib/api"
 
 const FormSchema = z.object({
     password: z.string().min(8, {
@@ -28,19 +29,18 @@ const FormSchema = z.object({
     path: ["confirmPassword"],
 })
 
-const ResetPasswordForm = () => {
+const ResetPasswordForm = ({ token }) => {
     const [isLoading, setIsLoading] = useState(false)
     const router = useRouter()
-    const searchParams = useSearchParams()
-    const token_hash = searchParams.get('token')
+    const api = useApi();
 
     // Verify we have the necessary parameters
     useEffect(() => {
-        if (!token_hash) {
+        if (!token) {
             toast.error("Invalid password reset link")
             router.push('/auth/forgot-password')
         }
-    }, [token_hash, router])
+    }, [token, router])
 
     const form = useForm({
         resolver: zodResolver(FormSchema),
@@ -53,27 +53,18 @@ const ResetPasswordForm = () => {
     async function onSubmit(data) {
         try {
             setIsLoading(true)
-            
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/reset-password`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    token: token_hash,
-                    password: data.password
-                }),
-                credentials: 'include'
+
+            const result = await api.post('/api/auth/reset-password', {
+                token: token,
+                password: data.password
             })
 
-            const result = await response.json()
-
-            if (!response.ok) {
-                throw new Error(result.error || 'Failed to reset password')
+            if (result.success) {
+                toast.success('Password reset successful, please login again')
+                router.replace('/auth/sign-in')
+            } else {    
+                toast.error(result.message || "Something went wrong. Please try again.")
             }
-
-            toast.success('Password reset successful')
-            router.replace('/dashboard')
         } catch (error) {
             toast.error(error.message || "Something went wrong. Please try again.")
             if (error.message?.includes('expired')) {

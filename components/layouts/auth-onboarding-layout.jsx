@@ -3,18 +3,22 @@
 import { Icon } from '@iconify/react'
 import Image from 'next/image'
 import Link from 'next/link'
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { SignUpStepper } from '@/components/auth/sign-up-stepper'
 import { useTheme } from "next-themes";
 
 const AuthOnboardingLayout = ({ children }) => {
     const { setTheme } = useTheme();
-    //set the theme to always be light for this layout only
+    const [mounted, setMounted] = useState(false);
+
+    // Only set theme after component is mounted to prevent hydration mismatch
     useEffect(() => {
+        setMounted(true);
         setTheme('light');
-    }, []);
+    }, [setTheme]);
+
     return (
-        <div className='grid grid-cols-1 md:grid-cols-12 h-screen max-h-screen !bg-background'>
+        <div className='grid grid-cols-1 md:grid-cols-12 h-screen max-h-screen !bg-background' suppressHydrationWarning>
             <div className='hidden md:block w-full h-full max-h-screen relative col-span-6 2xl:col-span-5'>
                 <div
                     className='absolute inset-0 mix-blend-multiply'
@@ -81,7 +85,7 @@ const AuthOnboardingLayout = ({ children }) => {
                     className='w-full h-full object-cover object-[25%_75%]'
                 />
             </div>
-            <div className='overflow-y-auto col-span-6 2xl:col-span-7 text-[#475569] w-full py-10 3xl:py-20'>
+            <div className='overflow-y-auto w-full h-full col-span-6 2xl:col-span-7 flex flex-col 3xl:justify-center text-[#475569] py-10 3xl:py-20'>
                 <SignUpStepper />
                 {children}
             </div>

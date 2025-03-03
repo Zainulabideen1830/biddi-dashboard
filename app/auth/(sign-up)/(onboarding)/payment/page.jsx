@@ -5,7 +5,7 @@ import React from 'react'
 
 const PaymentPage = () => {
     return (
-        <div className='w-[90%] max-w-xl mx-auto py-10'>
+        <div className='w-[90%] max-w-xl mx-auto'>
             <AuthTitle title='Payment' />
             <PaymentForm />
         </div>

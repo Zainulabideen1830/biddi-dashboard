@@ -15,8 +15,9 @@ import {
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
 import { toast } from "react-toastify"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Loader2 } from "lucide-react"
+import { useApi } from "@/lib/api"
 
 const FormSchema = z.object({
     email: z.string().email({
@@ -29,6 +30,9 @@ const ForgotPasswordForm = () => {
     const [resetUrl, setResetUrl] = useState(null)
     const [showResetLink, setShowResetLink] = useState(false)
     const [userEmail, setUserEmail] = useState("");
+    const [isResending, setIsResending] = useState(false)
+    const [countdown, setCountdown] = useState(60)
+
     const form = useForm({
         resolver: zodResolver(FormSchema),
         defaultValues: {
@@ -36,29 +40,36 @@ const ForgotPasswordForm = () => {
         },
     })
 
+    const api = useApi();
+
+    // Countdown effect
+    useEffect(() => {
+        let timer;
+        if (countdown > 0 && showResetLink) {
+            timer = setInterval(() => {
+                setCountdown((prev) => prev - 1);
+            }, 1000);
+        }
+        return () => {
+            if (timer) clearInterval(timer);
+        };
+    }, [countdown, showResetLink]);
+
     async function onSubmit(data) {
         try {
             setIsLoading(true)
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/forgot-password`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email: data.email }),
-                credentials: 'include'
-            })
+            const result = await api.post('/api/auth/forgot-password', { email: data.email })
 
-            const result = await response.json()
-
-            if (!response.ok) {
-                throw new Error(result.error || 'Failed to send reset link')
+            if (result.success) {
+                setResetUrl(result.resetUrl)
+                setShowResetLink(true)
+                setUserEmail(data.email)
+                setCountdown(60) // Initialize countdown
+                toast.success('If an account exists with this email, you will receive a password reset link')
+                form.reset()
+            } else {
+                toast.error(result.message || "Something went wrong. Please try again.")
             }
-
-            setResetUrl(result.resetUrl)
-            setShowResetLink(true)
-            setUserEmail(data.email)
-            toast.success('If an account exists with this email, you will receive a password reset link')
-            form.reset()
         } catch (error) {
             toast.error(error.message || "Something went wrong. Please try again.")
         } finally {
@@ -66,6 +77,24 @@ const ForgotPasswordForm = () => {
         }
     }
 
+    async function resendResetLink() {
+        try {
+            setIsResending(true)
+            const result = await api.post('/api/auth/forgot-password', { email: userEmail })
+
+            if (result.success) {
+                setResetUrl(result.resetUrl)
+                setCountdown(60) // Reset countdown
+                toast.success('A new password reset link has been sent to your inbox')
+            } else {
+                throw new Error(result.message || "Failed to resend reset link")
+            }
+        } catch (error) {
+            toast.error(error.message || "Something went wrong. Please try again.")
+        } finally {
+            setIsResending(false)
+        }
+    }
 
     if (showResetLink) {
         return (
@@ -74,7 +103,6 @@ const ForgotPasswordForm = () => {
                     <div className="text-sm mb-5">
                         <Link
                             href={resetUrl}
-                            target="_blank"
                             className="text-red-700 hover:underline mb-9 italic"
                         >
                             During the development phase, please click here to reset your password
@@ -85,6 +113,27 @@ const ForgotPasswordForm = () => {
                     A password reset link has been sent to <strong>{userEmail}</strong>
                     . Please check your inbox and click the reset link.
                 </p>
+                <div className="mt-3">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={resendResetLink}
+                        disabled={countdown > 0 || isResending}
+                        className="text-xs"
+                    >
+                        {isResending ? (
+                            <>
+                                <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                                Resending...
+                            </>
+                        ) : countdown > 0 ? (
+                            `Resend link (${countdown}s)`
+                        ) : (
+                            "Resend reset link"
+                        )}
+                    </Button>
+                </div>
             </div>
         )
     }
