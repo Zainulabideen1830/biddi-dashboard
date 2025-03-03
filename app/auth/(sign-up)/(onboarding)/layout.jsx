@@ -34,6 +34,7 @@ export default function OnboardingLayout({ children }) {
     return (
         <AuthGuard 
             requireAuth
+            requireEmailVerified
             requireNoCompanyInfo={isCompanyInfoPage}
             requireCompanyInfo={isPaymentPage}
             requireNoSubscription={isPaymentPage}

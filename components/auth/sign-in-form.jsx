@@ -34,7 +34,7 @@ const SignInForm = () => {
     const searchParams = useSearchParams()
     const [isLoading, setIsLoading] = useState(false)
 
-    const { setUser, checkAuth } = useAuthStore()
+    const { initAuth } = useAuthStore()
     
     // Remove the useEffect that redirects authenticated users
     // This is now handled by the AuthGuard component
@@ -56,8 +56,7 @@ const SignInForm = () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(data),
-                credentials: 'include'
+                body: JSON.stringify(data)
             })
     
             const result = await response.json()
@@ -66,36 +65,20 @@ const SignInForm = () => {
                 throw new Error(result.message || 'Failed to sign in')
             }
     
-            // Update auth store with user data
-            setUser(result.user)
+            // Update auth store with user data and tokens
+            initAuth(result.user, {
+                accessToken: result.accessToken,
+                refreshToken: result.refreshToken
+            })
             
-            // Verify auth state is updated
-            const isAuthValid = await checkAuth()
-            
-            if (!isAuthValid) {
-                throw new Error('Failed to verify authentication')
-            }
-            
-            // toast.success('Signed in successfully!')
             form.reset()
 
-            // Redirect based on user onboarding status
-            if (!result.user.has_company_info) {
-                router.push('/auth/company-info')
-                return
-            }
-            
-            if (!result.user.subscription_status || result.user.subscription_status !== 'ACTIVE') {
-                router.push('/auth/payment')
-                return
-            }
-    
             // If user has completed onboarding, go to dashboard
             router.push('/dashboard')
         } catch (error) {
             if (error.message.includes('not verified')) {
                 toast.error('Please verify your email before signing in')
-                router.push(`/auth/verify-email/resend?email=${encodeURIComponent(data.email)}`)
+                router.push('/auth/sign-up')
                 return
             }
             

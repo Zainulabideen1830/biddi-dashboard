@@ -10,7 +10,7 @@ import { toast } from 'react-toastify';
 const SidebarLogout = () => {
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
-    const { clearUser, logout } = useAuthStore();
+    const { clearSession, logout } = useAuthStore();
 
     const handleSignOut = async () => {
         try {
@@ -18,7 +18,7 @@ const SidebarLogout = () => {
             
             await logout();
 
-            clearUser();
+            clearSession();
             
             // Force a complete page reload and redirect
             if (typeof window !== 'undefined') {

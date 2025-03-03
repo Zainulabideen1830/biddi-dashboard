@@ -19,6 +19,7 @@ import { toast } from "react-toastify"
 import { useRouter } from "next/navigation"
 import Loader from "../shared/loader"
 import { useAuthStore } from "@/store/auth-store"
+import {  useApi } from "@/lib/api"
 
 const FormSchema = z.object({
     cardNumber: z.string().optional(),
@@ -38,6 +39,8 @@ const FormSchema = z.object({
 });
 
 const PaymentForm = () => {
+    const api = useApi();
+    const { updateUser } = useAuthStore()
     const form = useForm({
         resolver: zodResolver(FormSchema),
         defaultValues: {
@@ -51,58 +54,21 @@ const PaymentForm = () => {
     const [isLoading, setIsLoading] = useState(false)
     const router = useRouter()
 
-    const { user, isLoading: isAuthLoading, setUser } = useAuthStore();
-
-    // Get the actual user object, handling both flat and nested structures
-    const actualUser = user?.user ? user.user : user
-
-    // Helper function to check if user has an active subscription
-    const hasActiveSubscription = () => {
-        return actualUser?.subscription_status === 'ACTIVE' || actualUser?.subscription_status === 'TRIAL';
-    }
-
-    // Helper function to check if user has company info
-    const hasCompanyInfo = () => {
-        return !!actualUser?.has_company_info;
-    }
-
-    // Only redirect to dashboard if user has completed the entire onboarding process
-    if (hasCompanyInfo() && hasActiveSubscription() && !isAuthLoading) {
-        router.push('/dashboard')
-        return null; // Return null to prevent rendering the form
-    }
-
-    // If user doesn't have company info, they need to complete that step first
-    if (actualUser && !hasCompanyInfo() && !isAuthLoading) {
-        router.push('/auth/company-info')
-        return null; // Return null to prevent rendering the form
-    }
-
     async function onSubmit(data) {
         try {
             setIsLoading(true)
 
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/subscription`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include',
-                body: JSON.stringify({ ...data, plan: data.plan.toUpperCase() })
-            })
-
-            if (!response.ok) {
-                throw new Error('Failed to process subscription')
-            }
-
-            const result = await response.json()
+            const result = await api.post('/api/auth/subscription', { ...data, plan: data.plan.toUpperCase() })
 
             // Update the user state with the updated user data
-            if (result.user) {
-                setUser(result.user)
+            if (result.success) {
+                if (result.user) {
+                    // Only update the user data, preserving authentication state
+                    updateUser(result.user)
+                }
                 
-                // Force a small delay to ensure state is updated before redirect
-                // await new Promise(resolve => setTimeout(resolve, 100))
+                // Add a small delay to ensure state is updated
+                await new Promise(resolve => setTimeout(resolve, 100))
                 
                 toast.success(data.plan === 'trial' ?
                     'Free trial activated successfully!' :
@@ -131,9 +97,9 @@ const PaymentForm = () => {
         return basePrice + (additionalUsers * additionalUserPrice)
     }
 
-    if (isAuthLoading) {
-        return <Loader />
-    }
+    // if (isAuthLoading) {
+    //     return <Loader />
+    // }
 
     return (
         <Form {...form}>

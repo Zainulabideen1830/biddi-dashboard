@@ -2,17 +2,22 @@
 
 import { useTheme } from "next-themes";
 import Image from "next/image";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import AuthGuard from "@/components/auth/auth-guard";
 
 const AuthLayout = ({ children }) => {
-  const { setTheme } = useTheme()
+  const { setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  // Only set theme after component is mounted to prevent hydration mismatch
   useEffect(() => {
-    setTheme('light')
-  }, [])
+    setMounted(true);
+    setTheme('light');
+  }, [setTheme]);
+
   return (
     <AuthGuard requireNoAuth>
-      <div className="grid grid-cols-1 md:grid-cols-2 h-screen max-h-screen">
+      <div className="grid grid-cols-1 md:grid-cols-2 h-screen max-h-screen" suppressHydrationWarning>
         <div className="overflow-y-auto py-10 flex items-center">
           <div className="w-[90%] max-w-md mx-auto text-[#475569] px-1">
             {children}

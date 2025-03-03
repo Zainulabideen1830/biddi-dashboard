@@ -19,6 +19,7 @@ import { useRouter } from "next/navigation"
 import { toast } from "react-toastify"
 import { useAuthStore } from "@/store/auth-store"
 import Loader from "../shared/loader"
+import { useApi } from "@/lib/api"
 
 const FormSchema = z.object({
     businessName: z.string().min(1, {
@@ -30,8 +31,9 @@ const FormSchema = z.object({
 })
 
 const CompanyInfoForm = () => {
+    const api = useApi();
     const router = useRouter()
-    const { user, isLoading: isAuthLoading, setUser } = useAuthStore();
+    const { user, isLoading: isAuthLoading, updateUser } = useAuthStore();
 
     // Get the actual user object, handling both flat and nested structures
     const actualUser = user?.user ? user.user : user
@@ -66,28 +68,19 @@ const CompanyInfoForm = () => {
         try {
             setIsLoading(true)
 
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/company-info`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include',
-                body: JSON.stringify(data)
-            })
-
-            if (!response.ok) {
-                throw new Error('Failed to save company information')
-            }
-
-            const result = await response.json()
+            const result = await api.post('/api/auth/company-info', data);
 
             // Update the user state with the updated user data
-            if (result.user) {
-                setUser(result.user)
+            if (result.success) {
+                // Only update the user data, preserving authentication state
+                updateUser(result.user)
+                toast.success('Company information saved successfully')
+                router.push('/auth/payment')
+            } else {
+                toast.error(result.message || 'Something went wrong')
             }
 
-            toast.success('Company information saved successfully')
-            router.push('/auth/payment')
+
         } catch (error) {
             toast.error(error.message || 'Something went wrong')
         } finally {

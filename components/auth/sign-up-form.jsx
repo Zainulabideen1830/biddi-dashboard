@@ -19,6 +19,7 @@ import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { useAuthStore } from "@/store/auth-store";
+import { useApi } from "@/lib/api";
 
 const FormSchema = z
   .object({
@@ -42,7 +43,8 @@ const FormSchema = z
   });
 
 const SignUpForm = ({ token }) => {
-  const { setUser } = useAuthStore();
+  const { setUser, initAuth } = useAuthStore();
+  const api = useApi();
   const form = useForm({
     resolver: zodResolver(FormSchema),
     defaultValues: {
@@ -62,6 +64,7 @@ const SignUpForm = ({ token }) => {
   const [isVerified, setIsVerified] = useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [verificationUrl, setVerificationUrl] = useState("");
+  
   // Countdown effect
   useEffect(() => {
     let timer;
@@ -80,35 +83,27 @@ const SignUpForm = ({ token }) => {
     const verifyToken = async (token) => {
       try {
         setIsVerifying(true);
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/auth/verify-email?token=${token}`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ token }),
-            credentials: 'include',
-          }
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.message || 'Verification failed');
+        
+        // Use GET request for tokens from URL, matching the backend endpoint
+        const result = await api.post('/api/auth/verify-email', { token });
+        
+        if (result.success) {
+          // Update auth store with user data and tokens
+          initAuth(result.user, {
+            accessToken: result.accessToken,
+            refreshToken: result.refreshToken
+          });
+          
+          setIsVerified(true);
+          toast.success('Email verified successfully!');
+          
+          // Redirect to company info page after a short delay
+          setTimeout(() => {
+            router.push('/auth/company-info');
+          }, 1000);
+        } else {
+          throw new Error(result.message || 'Verification failed');
         }
-
-        // Update auth store with user data
-        setUser(data.user);
-        setIsVerified(true);
-        toast.success('Email verified successfully!');
-        setIsVerifying(false);
-
-        // Redirect to company info page after a short delay
-        setTimeout(() => {
-          router.push('/auth/company-info');
-        }, 1000);
-
       } catch (error) {
         toast.error(error.message || 'Verification failed');
         console.error('Verification error:', error);
@@ -127,26 +122,17 @@ const SignUpForm = ({ token }) => {
     try {
       setIsResending(true);
 
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/resend-verification`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email: userEmail }),
-          credentials: "include",
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to resend verification email");
+      const result = await api.post('/api/auth/resend-verification', { 
+        email: userEmail 
+      });
+      
+      if (result.success) {
+        setCountdown(60); // Reset countdown
+        toast.success("A new verification email has been sent to your inbox.");
+        setVerificationUrl(result.verificationUrl);
+      } else {
+        throw new Error(result.message || "Failed to resend verification email");
       }
-
-      setCountdown(60); // Reset countdown
-      toast.success("A new verification email has been sent to your inbox.");
     } catch (error) {
       toast.error(
         error.message || "Something went wrong. Please try again later."
@@ -160,40 +146,34 @@ const SignUpForm = ({ token }) => {
     try {
       setIsLoading(true);
 
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/register`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            // 'Accept': 'application/json',
-            // 'Access-Control-Allow-Credentials': 'true'
-          },
-          credentials: "include",
-          body: JSON.stringify({
-            name: data.name,
-            email: data.email,
-            password: data.password,
-            phone: data.phone,
-          }),
-        }
-      );
-
-      const result = await response.json();
-
-      if (!response.ok) {
+      const result = await api.post('/api/auth/register', {
+        name: data.name,
+        email: data.email,
+        password: data.password,
+        phone: data.phone,
+      });
+      
+      if (result.success) {
+        // Set email for verification UI
+        setUserEmail(data.email);
+        setVerificationUrl(result.verificationUrl);
+        
+        // Show verification UI
+        setShowVerification(true);
+        setCountdown(60);
+        
+        // Update auth store with user data and tokens
+        // initAuth(result.user, {
+        //   accessToken: result.accessToken,
+        //   refreshToken: result.refreshToken
+        // });
+        
+        toast.success(
+          "Account created successfully! Please check your email for verification."
+        );
+      } else {
         throw new Error(result.message || "Failed to create account");
       }
-
-      // Set email for verification UI
-      setUserEmail(data.email);
-      setVerificationUrl(result.verificationUrl);
-      // Show verification UI
-      setShowVerification(true);
-      setCountdown(60);
-      toast.success(
-        "Account created successfully! Please check your email for verification."
-      );
     } catch (error) {
       toast.error(error.message || "Something went wrong. Please try again.");
       console.error("Signup error:", error);
@@ -205,11 +185,11 @@ const SignUpForm = ({ token }) => {
   // Show verification status if token is present
   if (isVerifying || isVerified) {
     return (
-      <div className="space-y-6 text-center mt-5">
+      <div className="space-y-6 text-center">
         <div className="space-y-2">
           <h2 className="text-2xl font-semibold">{isVerified ? "Email Verified!" : "Verifying Email..."}</h2>
           <p className="text-muted-foreground">
-            {isVerified ? "Redirecting you to the dashboard..." : "Please wait while we verify your email..."}
+            {isVerified ? "Redirecting you to the company info page..." : "Please wait while we verify your email..."}
           </p>
         </div>
         <Loader2 className="animate-spin mx-auto h-8 w-8" />
@@ -224,10 +204,8 @@ const SignUpForm = ({ token }) => {
           <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
             {verificationUrl && (
               <div className="text-sm mb-5">
-
                 <Link
                   href={verificationUrl}
-                  // target="_blank"
                   className="text-red-700 hover:underline mb-9 italic"
                 >
                   During the development phase, please click here to verify your
@@ -253,23 +231,16 @@ const SignUpForm = ({ token }) => {
           {isResending ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Sending verification email...
+              Resending...
             </>
-          ) : countdown > 0 ? (
-            `Resend available in ${countdown}s`
           ) : (
             "Resend Verification Email"
           )}
         </Button>
-        <div className="text-sm text-center space-y-2">
-          <p className="text-muted-foreground">
-            Make sure to check your spam folder if you don't see the email.
-          </p>
-          <Link
-            href="/auth/sign-in"
-            className="text-primary hover:underline block"
-          >
-            Back to Sign In
+        <div className="text-sm text-center">
+          Already have an account?{" "}
+          <Link href="/auth/sign-in" className="text-primary hover:underline">
+            Sign In
           </Link>
         </div>
       </div>
@@ -279,34 +250,41 @@ const SignUpForm = ({ token }) => {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid grid-cols-1 3xl:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Full Name</FormLabel>
-                <FormControl>
-                  <Input {...field} className="bg-white" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="email"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Email Address</FormLabel>
-                <FormControl>
-                  <Input {...field} className="bg-white" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Full Name</FormLabel>
+              <FormControl>
+                <Input 
+                  {...field} 
+                  disabled={isLoading}
+                  className="bg-white"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email</FormLabel>
+              <FormControl>
+                <Input 
+                  type="email" 
+                  {...field} 
+                  disabled={isLoading}
+                  className="bg-white"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <FormField
           control={form.control}
           name="phone"
@@ -314,7 +292,12 @@ const SignUpForm = ({ token }) => {
             <FormItem>
               <FormLabel>Phone Number</FormLabel>
               <FormControl>
-                <Input {...field} className="bg-white" />
+                <Input 
+                  type="tel" 
+                  {...field} 
+                  disabled={isLoading}
+                  className="bg-white"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -327,7 +310,12 @@ const SignUpForm = ({ token }) => {
             <FormItem>
               <FormLabel>Password</FormLabel>
               <FormControl>
-                <Input type="password" {...field} className="bg-white" />
+                <Input 
+                  type="password" 
+                  {...field} 
+                  disabled={isLoading}
+                  className="bg-white"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -340,17 +328,18 @@ const SignUpForm = ({ token }) => {
             <FormItem>
               <FormLabel>Confirm Password</FormLabel>
               <FormControl>
-                <Input type="password" {...field} className="bg-white" />
+                <Input 
+                  type="password" 
+                  {...field} 
+                  disabled={isLoading}
+                  className="bg-white"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-        <Button
-          type="submit"
-          className="w-full flex items-center gap-2"
-          disabled={isLoading}
-        >
+        <Button type="submit" disabled={isLoading} className="w-full">
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -362,13 +351,17 @@ const SignUpForm = ({ token }) => {
         </Button>
         <div className="text-sm text-center">
           Already have an account?{" "}
-          <Link href="/auth/sign-in" className="text-primary">
+          <Link 
+            href="/auth/sign-in" 
+            className="text-primary hover:underline"
+            tabIndex={isLoading ? -1 : 0}
+          >
             Sign In
           </Link>
         </div>
       </form>
     </Form>
   );
-};
+}
 
 export default SignUpForm;

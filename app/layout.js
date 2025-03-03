@@ -19,7 +19,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${plusJakartaSans.className} antialiased`}
         suppressHydrationWarning
@@ -29,6 +29,7 @@ export default function RootLayout({ children }) {
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
+          storageKey="biddi-theme"
         >
           <Suspense fallback={<Loader />}>
             {children}
