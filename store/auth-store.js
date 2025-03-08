@@ -6,6 +6,12 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 let isRefreshingToken = false
 let refreshPromise = null
 
+// Add tracking for auth validation to prevent duplicate calls
+let isValidatingAuth = false
+let validationPromise = null
+let lastValidationTime = null
+const VALIDATION_COOLDOWN = 2000 // 2 seconds cooldown between validations
+
 // Add a request interceptor function
 const createAuthFetch = (originalFetch) => async (url, options = {}) => {
   const authStore = useAuthStore.getState()
@@ -97,6 +103,28 @@ const createAuthFetch = (originalFetch) => async (url, options = {}) => {
   }
 }
 
+// Set up a timer for periodic validation
+let authValidationTimer = null
+
+// Function to set up periodic validation
+const setupPeriodicValidation = (validateFn, interval = 5 * 60 * 1000) => {
+  // Clear any existing timer
+  if (authValidationTimer) {
+    clearInterval(authValidationTimer)
+  }
+  
+  // Set up new timer (default: check every 5 minutes)
+  authValidationTimer = setInterval(validateFn, interval)
+  
+  // Return a cleanup function
+  return () => {
+    if (authValidationTimer) {
+      clearInterval(authValidationTimer)
+      authValidationTimer = null
+    }
+  }
+}
+
 export const useAuthStore = create(
   persist(
     (set, get) => ({
@@ -107,6 +135,7 @@ export const useAuthStore = create(
       isLoggingOut: false,
       isRefreshing: false,
       error: null,
+      lastValidated: null, // Track when auth was last validated
       
       // User data (separate from auth state)
       user: null,
@@ -141,14 +170,22 @@ export const useAuthStore = create(
       // Token refresh function
       refreshToken: async () => {
         try {
+          // If refresh is already in progress, return the existing promise
+          if (isRefreshingToken && refreshPromise) {
+            return refreshPromise
+          }
+          
           // Set refreshing state to true
           set({ isRefreshing: true })
-
+          
+          // Start a new refresh
+          isRefreshingToken = true
+          
           // Add a check to prevent infinite loops
           const refreshToken = get().tokens?.refreshToken;
 
           if (!refreshToken) {
-            console.error('No refresh token available');
+            // console.error('No refresh token available');
             set({
               tokens: null,
               isAuthenticated: false,
@@ -171,7 +208,7 @@ export const useAuthStore = create(
 
           if (!response.ok) {
             // Instead of throwing, handle the error gracefully
-            console.error('Failed to refresh token:', response.status);
+            // console.error('Failed to refresh token:', response.status);
             set({
               tokens: null,
               isAuthenticated: false,
@@ -191,7 +228,8 @@ export const useAuthStore = create(
                 refreshToken: data.refreshToken
               },
               isAuthenticated: true,
-              error: null
+              error: null,
+              lastValidated: new Date().toISOString()
             })
             
             // If user data is returned, update it as well
@@ -222,6 +260,8 @@ export const useAuthStore = create(
         } finally {
           // Reset refreshing state
           set({ isRefreshing: false })
+          isRefreshingToken = false
+          refreshPromise = null
         }
       },
 
@@ -241,8 +281,17 @@ export const useAuthStore = create(
           user: userData,
           tokens: authTokens,
           isAuthenticated: true,
-          error: null
+          error: null,
+          lastValidated: new Date().toISOString()
         })
+        
+        // Set up periodic validation
+        const cleanup = setupPeriodicValidation(() => {
+          get().validateAuth()
+        })
+        
+        // Return cleanup function
+        return cleanup
       },
       
       // Clear authentication state only (preserve user data)
@@ -252,6 +301,12 @@ export const useAuthStore = create(
           isAuthenticated: false, 
           error: null 
         })
+        
+        // Clear periodic validation
+        if (authValidationTimer) {
+          clearInterval(authValidationTimer)
+          authValidationTimer = null
+        }
       },
       
       // Clear both authentication and user data
@@ -262,16 +317,74 @@ export const useAuthStore = create(
           isAuthenticated: false, 
           error: null 
         })
+        
+        // Clear periodic validation
+        if (authValidationTimer) {
+          clearInterval(authValidationTimer)
+          authValidationTimer = null
+        }
       },
 
       setLoading: (isLoading) => set({ isLoading }),
       setError: (error) => set({ error }),
 
+      // Validate current authentication status
+      validateAuth: async (force = false) => {
+        const lastValidated = get().lastValidated
+        const now = new Date()
+        
+        // Check if we're within the cooldown period
+        if (lastValidationTime && !force) {
+          const timeSinceLast = now - lastValidationTime
+          if (timeSinceLast < VALIDATION_COOLDOWN) {
+            console.log(`Skipping auth validation (cooldown: ${timeSinceLast}ms < ${VALIDATION_COOLDOWN}ms)`)
+            return get().isAuthenticated
+          }
+        }
+        
+        // Skip validation if it was done recently (within the last minute) unless forced
+        if (!force && lastValidated) {
+          const lastValidatedDate = new Date(lastValidated)
+          const timeSinceLastValidation = now - lastValidatedDate
+          
+          // If validated less than a minute ago, skip
+          if (timeSinceLastValidation < 60 * 1000) {
+            return get().isAuthenticated
+          }
+        }
+        
+        // If validation is already in progress, return the existing promise
+        if (isValidatingAuth && validationPromise) {
+          return validationPromise
+        }
+        
+        // Update the last validation time
+        lastValidationTime = now
+        
+        // Start a new validation
+        isValidatingAuth = true
+        validationPromise = get().checkAuth()
+          .finally(() => {
+            isValidatingAuth = false
+            validationPromise = null
+          })
+        
+        return validationPromise
+      },
+
       // Check if the current authentication is valid
       checkAuth: async () => {
         try {
+          // If validation is already in progress, return the existing promise
+          if (isValidatingAuth && validationPromise && validationPromise !== true && validationPromise !== false) {
+            return validationPromise
+          }
+          
           set({ isLoading: true, error: null })
-
+          
+          // Start a new validation
+          isValidatingAuth = true
+          
           const accessToken = get().tokens?.accessToken;
 
           if (!accessToken) {
@@ -295,7 +408,12 @@ export const useAuthStore = create(
             
             // Make sure we're setting just the user data, not the entire response
             if (data.success && data.user) {
-              set({ user: data.user, isAuthenticated: true, error: null })
+              set({ 
+                user: data.user, 
+                isAuthenticated: true, 
+                error: null,
+                lastValidated: new Date().toISOString()
+              })
               return true
             }
           }
@@ -329,6 +447,8 @@ export const useAuthStore = create(
           return false
         } finally {
           set({ isLoading: false })
+          isValidatingAuth = false
+          validationPromise = null
         }
       },
 
@@ -364,7 +484,24 @@ export const useAuthStore = create(
     }),
     {
       name: 'auth-storage',
-      storage: createJSONStorage(() => localStorage)
+      storage: createJSONStorage(() => localStorage),
+      onRehydrateStorage: () => (state) => {
+        // When the store is rehydrated from localStorage, validate the auth state
+        if (state && state.isAuthenticated) {
+          // Schedule validation to run after rehydration is complete
+          setTimeout(() => {
+            // Use a flag to prevent duplicate validations during initial load
+            if (!isValidatingAuth) {
+              state.validateAuth(true)
+              
+              // Set up periodic validation
+              setupPeriodicValidation(() => {
+                state.validateAuth()
+              })
+            }
+          }, 0)
+        }
+      }
     }
   )
 )

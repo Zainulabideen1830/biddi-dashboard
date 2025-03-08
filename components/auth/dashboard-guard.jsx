@@ -3,15 +3,16 @@
 import AuthGuard from './auth-guard'
 
 /**
- * DashboardGuard - Protects dashboard routes by ensuring the user has completed onboarding
+ * DashboardGuard - Protects dashboard routes
  * 
- * This component checks if the user has completed all required onboarding steps:
- * 1. User must be authenticated
- * 2. User must have verified their email
- * 3. User must have company info
- * 4. User must have a subscription
+ * This component ensures that only authenticated users with:
+ * 1. Verified email
+ * 2. Completed company info (admin users only, not required for invited users)
+ * 3. Active subscription (admin users only, not required for invited users)
+ * can access dashboard pages.
  * 
- * If any of these conditions are not met, the user is redirected to the appropriate onboarding step.
+ * Note: Users who joined via invitation already have company info and don't need to complete onboarding.
+ * The is_invited field is used to identify these users and exempt them from company info and subscription requirements.
  */
 export default function DashboardGuard({ children }) {
     return (

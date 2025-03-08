@@ -59,6 +59,10 @@ export const navLinks = [
                 title: "Manage Users",
                 url: "/dashboard/settings/users",
             },
+            {
+                title: "Roles & Permissions",
+                url: "/dashboard/settings/roles",
+            },
         ],
     },
     {

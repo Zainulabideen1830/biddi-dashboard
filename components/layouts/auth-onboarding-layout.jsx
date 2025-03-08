@@ -6,10 +6,15 @@ import Link from 'next/link'
 import React, { useEffect, useState } from 'react'
 import { SignUpStepper } from '@/components/auth/sign-up-stepper'
 import { useTheme } from "next-themes";
+import { useSearchParams } from 'next/navigation'
 
 const AuthOnboardingLayout = ({ children }) => {
     const { setTheme } = useTheme();
     const [mounted, setMounted] = useState(false);
+    const searchParams = useSearchParams();
+
+    // Check if the user is accessing via an invitation link
+    const isInvitationFlow = searchParams?.get('invitation');
 
     // Only set theme after component is mounted to prevent hydration mismatch
     useEffect(() => {
@@ -86,7 +91,8 @@ const AuthOnboardingLayout = ({ children }) => {
                 />
             </div>
             <div className='overflow-y-auto w-full h-full col-span-6 2xl:col-span-7 flex flex-col 3xl:justify-center text-[#475569] py-10 3xl:py-20'>
-                <SignUpStepper />
+                {/* only show the stepper if not in invitation flow */}
+                {!isInvitationFlow && <SignUpStepper />}
                 {children}
             </div>
         </div>

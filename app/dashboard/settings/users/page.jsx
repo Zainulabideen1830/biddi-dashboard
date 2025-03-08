@@ -1,26 +1,40 @@
-import SectionHeading from '@/components/shared/section-heading'
-import { Input } from '@/components/ui/input'
-import UsersTable from '@/components/dashboard/settings/users/users-table'
-import AddUser from '@/components/dashboard/settings/users/add-user'
-import { Search } from 'lucide-react'
+'use client'
 
-const UsersSettingsPage = () => {
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { UsersTable } from '@/components/dashboard/settings/users/users-table'
+import { InvitationsTable } from '@/components/dashboard/settings/users/invitations-table'
+import { AddUser } from '@/components/dashboard/settings/users/add-user'
+
+export default function UsersPage() {
   return (
-    <div className='custom_container'>
-      <div className='flex items-center justify-between gap-4 flex-wrap mb-6'>
-        <SectionHeading title='Manage Users' />
-        <div className='flex items-center justify-end gap-4 flex-1'>
-          <div className="flex items-center gap-2 border border-[#D5D5D5] dark:border-[#061733] bg-white dark:bg-backgroundSecondary pl-4 rounded-full flex-1 max-w-[470px] ml-5">
-            <Search className="size-5 text-muted-foreground" />
-            <Input type="text" placeholder="Search" className="border-none outline-none focus:!outline-none focus:!ring-0 shadow-none h-10 text-sm text-muted-foreground" />
-          </div>
-          <AddUser />
+    <div className="custom_container py-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold">User Management</h1>
+          <p className="text-muted-foreground">Manage users and their roles in your organization</p>
         </div>
+        <AddUser />
       </div>
 
-      <UsersTable />
+      <Tabs defaultValue="users">
+        <TabsList>
+          <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="invitations">Invitations</TabsTrigger>
+        </TabsList>
+        <TabsContent value="users" className="mt-6">
+          <UsersTable />
+        </TabsContent>
+        <TabsContent value="invitations" className="mt-6">
+          <InvitationsTable />
+          {/* <div className="space-y-4">
+            <div>
+              <h2 className="text-xl font-semibold">Pending Invitations</h2>
+              <p className="text-muted-foreground">Manage invitations sent to users</p>
+            </div>
+            <InvitationsTable />
+          </div> */}
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
-
-export default UsersSettingsPage
