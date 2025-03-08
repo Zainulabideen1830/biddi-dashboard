@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import { useEffect, useState, useRef } from 'react'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { useAuthStore } from '@/store/auth-store'
 import Loader from '../shared/loader'
 
@@ -13,6 +13,7 @@ import Loader from '../shared/loader'
  * 2. If a user is authenticated but hasn't verified their email, they can only access sign-up pages
  * 3. If a user is authenticated and has verified their email but hasn't completed onboarding, they can access onboarding pages
  * 4. If a user is authenticated and has completed onboarding, they are redirected to dashboard
+ * 5. Invited users bypass the company info and subscription steps
  * 
  * @param {Object} props
  * @param {React.ReactNode} props.children - The page content to render if access is allowed
@@ -36,17 +37,34 @@ export default function AuthGuard({
 }) {
   const router = useRouter()
   const pathname = usePathname()
-  const { user, tokens, isAuthenticated, isLoading, isRefreshing, checkAuth } = useAuthStore()
+  const searchParams = useSearchParams()
+  const { user, tokens, isAuthenticated, isLoading, isRefreshing, validateAuth } = useAuthStore()
   const [isChecking, setIsChecking] = useState(true)
-  
+  const authCheckRef = useRef(false)
+
+  // Check if the user is accessing via an invitation link
+  const isInvitationFlow = searchParams?.get('invitation')
 
   useEffect(() => {
     let mounted = true
     let authCheckAttempts = 0;
     const MAX_AUTH_CHECK_ATTEMPTS = 2; // Limit the number of auth check attempts
     
+    // Prevent duplicate auth checks in the same render cycle
+    if (authCheckRef.current) {
+      return;
+    }
+    
+    authCheckRef.current = true;
+    
     async function verifyAccess() {
       try {
+        // Special case: Allow access to sign-up page with invitation parameter
+        if (isInvitationFlow && pathname.includes('/auth/sign-up')) {
+          setIsChecking(false)
+          return
+        }
+        
         // First check if we need to verify authentication
         if (!isAuthenticated && requireAuth) {
           // Prevent infinite loops by limiting auth check attempts
@@ -67,8 +85,8 @@ export default function AuthGuard({
             return
           }
           
-          // Verify with the server
-          const isValid = await checkAuth()
+          // Verify with the server - use validateAuth instead of checkAuth
+          const isValid = await validateAuth(true)
           
           if (!mounted) return
           
@@ -78,20 +96,43 @@ export default function AuthGuard({
             router.replace(`/auth/sign-in?returnUrl=${returnUrl}`)
             return
           }
+        } else if (isAuthenticated && requireAuth) {
+          // If already authenticated but we're on a protected route,
+          // still validate the auth state to ensure it's current
+          // But only do this if we haven't validated recently
+          const lastValidated = useAuthStore.getState().lastValidated
+          if (lastValidated) {
+            const lastValidatedDate = new Date(lastValidated)
+            const now = new Date()
+            const timeSinceLastValidation = now - lastValidatedDate
+            
+            // If it's been more than 5 minutes since the last validation, validate again
+            if (timeSinceLastValidation > 5 * 60 * 1000) {
+              await validateAuth()
+            }
+          } else {
+            await validateAuth()
+          }
         }
         
-        // Get the latest user data from the store after checkAuth
+        // Get the latest user data from the store after validation
         const currentUser = useAuthStore.getState().user
         const actualCurrentUser = currentUser?.user ? currentUser.user : currentUser
         
         // Check if email is verified
         const isEmailVerified = !!actualCurrentUser?.is_verified
         
+        // Check if user was invited
+        const isInvitedUser = !!actualCurrentUser?.is_invited
+        
         // Re-check helper functions with the latest user data
-        const currentHasCompanyInfo = !!actualCurrentUser?.has_company_info
-        const currentHasActiveSubscription = 
-          actualCurrentUser?.subscription_status === 'ACTIVE' || 
-          actualCurrentUser?.subscription_status === 'TRIAL'
+        // Company info is only required for admin users who weren't invited
+        const currentHasCompanyInfo = !!actualCurrentUser?.has_company_info || isInvitedUser
+        
+        // Subscription is only required for admin users who weren't invited
+        const currentHasActiveSubscription = isInvitedUser || 
+          (actualCurrentUser?.role.name !== 'admin') || 
+          (actualCurrentUser?.subscription_status === 'ACTIVE' || actualCurrentUser?.subscription_status === 'TRIAL')
         
         // Now apply the access rules
         
@@ -115,14 +156,19 @@ export default function AuthGuard({
             return
           }
           
-          if (!currentHasCompanyInfo) {
-            router.replace('/auth/company-info')
-            return
-          }
-          
-          if (!currentHasActiveSubscription) {
-            router.replace('/auth/payment')
-            return
+          // Skip company info and payment steps for invited users
+          if (!isInvitedUser) {
+            if (!currentHasCompanyInfo && actualCurrentUser?.role.name === 'admin') {
+              console.log('[AuthGuard Rule 1] redirecting to company-info')
+              router.replace('/auth/company-info')
+              return
+            }
+            
+            if (!currentHasActiveSubscription && actualCurrentUser?.role.name === 'admin') {
+              console.log('[AuthGuard Rule 1] redirecting to payment')
+              router.replace('/auth/payment')
+              return
+            }
           }
           
           // If onboarding is complete, go to dashboard
@@ -131,15 +177,18 @@ export default function AuthGuard({
         }
         
         // Rule 2: If page requires company info but user doesn't have it
-        if (requireCompanyInfo && !currentHasCompanyInfo) {
+        // Skip for invited users
+        if (requireCompanyInfo && !isInvitedUser && actualCurrentUser?.role.name === 'admin' && !currentHasCompanyInfo) {
+          console.log('[AuthGuard Rule 2] redirecting to company-info')
           router.replace('/auth/company-info')
           return
         }
         
         // Rule 3: If page requires no company info but user has it
-        if (requireNoCompanyInfo && currentHasCompanyInfo) {
+        if (requireNoCompanyInfo && !isInvitedUser && actualCurrentUser?.role.name === 'admin' && currentHasCompanyInfo) {
           // If they have company info but no subscription, go to payment
           if (!currentHasActiveSubscription) {
+            console.log('[AuthGuard Rule 3] redirecting to payment')
             router.replace('/auth/payment')
             return
           }
@@ -150,7 +199,9 @@ export default function AuthGuard({
         }
         
         // Rule 4: If page requires subscription but user doesn't have it
-        if (requireSubscription && !currentHasActiveSubscription) {
+        // Skip for invited users
+        if (requireSubscription && !isInvitedUser && actualCurrentUser?.role.name === 'admin' && !currentHasActiveSubscription) {
+          console.log('[AuthGuard Rule 4] redirecting to payment')
           router.replace('/auth/payment')
           return
         }
@@ -169,6 +220,8 @@ export default function AuthGuard({
           // On error, allow access and let the page handle any issues
           setIsChecking(false)
         }
+      } finally {
+        authCheckRef.current = false;
       }
     }
     
@@ -188,7 +241,9 @@ export default function AuthGuard({
     requireCompanyInfo,
     requireNoCompanyInfo,
     requireSubscription,
-    requireNoSubscription
+    requireNoSubscription,
+    validateAuth,
+    isInvitationFlow
   ])
   
   // Show loader while checking access

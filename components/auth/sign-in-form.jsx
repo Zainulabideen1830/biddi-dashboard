@@ -19,6 +19,7 @@ import { Loader2 } from "lucide-react"
 import { useState } from "react"
 import { toast } from "react-toastify"
 import { useAuthStore } from "@/store/auth-store"
+import { useApi } from "@/lib/api"
 
 const FormSchema = z.object({
     email: z.string().email({
@@ -30,6 +31,7 @@ const FormSchema = z.object({
 })
 
 const SignInForm = () => {
+    const api = useApi();
     const router = useRouter()
     const searchParams = useSearchParams()
     const [isLoading, setIsLoading] = useState(false)
@@ -51,38 +53,26 @@ const SignInForm = () => {
         try {
             setIsLoading(true)
             
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data)
-            })
-    
-            const result = await response.json()
+            const result = await api.post('/api/auth/login', data)
 
-            if (!response.ok) {
+            if (result.success) {
+                // Initialize auth with user data and tokens
+                initAuth(result.user, {
+                    accessToken: result.accessToken,
+                    refreshToken: result.refreshToken
+                })
+                
+                // toast.success("Success!", "You have successfully signed in.")
+                
+                // Get the return URL from the query parameters or default to dashboard
+                const returnUrl = searchParams.get('returnUrl') || '/dashboard'
+                router.push(returnUrl)
+            } else {
                 throw new Error(result.message || 'Failed to sign in')
             }
-    
-            // Update auth store with user data and tokens
-            initAuth(result.user, {
-                accessToken: result.accessToken,
-                refreshToken: result.refreshToken
-            })
-            
-            form.reset()
-
-            // If user has completed onboarding, go to dashboard
-            router.push('/dashboard')
         } catch (error) {
-            if (error.message.includes('not verified')) {
-                toast.error('Please verify your email before signing in')
-                router.push('/auth/sign-up')
-                return
-            }
-            
-            toast.error(error.message || 'Something went wrong')
+            console.error('Sign in error:', error)
+            toast.error(error.message || "An error occurred during sign in.")
         } finally {
             setIsLoading(false)
         }

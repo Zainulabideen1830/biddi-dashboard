@@ -9,7 +9,7 @@ import Loader from "@/components/shared/loader";
 
 export default function OnboardingLayout({ children }) {
     const pathname = usePathname();
-    const { checkAuth, isLoading } = useAuthStore();
+    const { validateAuth, isLoading } = useAuthStore();
     const [isChecking, setIsChecking] = useState(true);
     
     // Determine which page we're on to set the appropriate guards
@@ -19,12 +19,13 @@ export default function OnboardingLayout({ children }) {
     // Verify authentication on mount
     useEffect(() => {
         async function verifyAuth() {
-            await checkAuth();
+            // Use validateAuth instead of checkAuth to leverage the debouncing mechanism
+            await validateAuth();
             setIsChecking(false);
         }
         
         verifyAuth();
-    }, [checkAuth]);
+    }, [validateAuth]);
     
     // Show loader while checking auth
     if (isChecking || isLoading) {
