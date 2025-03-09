@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
     Table,
@@ -35,24 +35,34 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useAuthStore } from '@/store/auth-store'
 
 export function UsersTable() {
     const [users, setUsers] = useState([])
     const [roles, setRoles] = useState([])
     const [isLoading, setIsLoading] = useState(true)
     const [isUpdating, setIsUpdating] = useState(false)
+    const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
     const [actionUserId, setActionUserId] = useState(null)
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
     const [selectedUser, setSelectedUser] = useState(null)
     const [serverError, setServerError] = useState(null)
     const api = useApi()
 
+    const { user } = useAuthStore()
+
+    // ensure that only one fetch is running at a time
+    const fetchUsersRef = useRef(null)
+    const fetchRolesRef = useRef(null)
+
     useEffect(() => {
-        fetchUsers()
-        fetchRoles()
+        // fetch users and roles in parallel    
+        Promise.all([fetchUsers(), fetchRoles()])
     }, [])
 
     const fetchUsers = async () => {
+        if (fetchUsersRef.current) return
+        fetchUsersRef.current = true
         try {
             setIsLoading(true)
             setServerError(null)
@@ -66,14 +76,17 @@ export function UsersTable() {
             }
         } catch (error) {
             console.error('Error fetching users:', error)
-            setServerError('Failed to load users. Please try again.')
-            toast.error('Failed to load users. Please try again.')
+            setServerError(error.message || 'Failed to load users. Please try again.')
+            toast.error(error.message || 'Failed to load users. Please try again.')
         } finally {
             setIsLoading(false)
+            fetchUsersRef.current = false
         }
     }
 
     const fetchRoles = async () => {
+        if (fetchRolesRef.current) return
+        fetchRolesRef.current = true
         try {
             const response = await api.get('/api/rbac/roles')
             
@@ -84,7 +97,10 @@ export function UsersTable() {
             }
         } catch (error) {
             console.error('Error fetching roles:', error)
-            toast.error('Failed to load roles. Please try again.')
+            setServerError(error.message || 'Failed to load roles. Please try again.')
+            toast.error(error.message || 'Failed to load roles. Please try again.')
+        } finally {
+            fetchRolesRef.current = false
         }
     }
 
@@ -116,7 +132,7 @@ export function UsersTable() {
                 throw new Error(response.message || 'Failed to update user role')
             }
         } catch (error) {
-            toast.error('Failed to update user role')
+            toast.error(error.message || 'Failed to update user role')
             console.error('Error updating role:', error)
         } finally {
             setIsUpdating(false)
@@ -125,7 +141,16 @@ export function UsersTable() {
     }
 
     const handleDeactivateToggle = async (userId, currentStatus) => {
-        setIsUpdating(true)
+        // Find the user
+        const userToUpdate = users.find(user => user.id === userId)
+        
+        // Prevent deactivation of company owners with admin role
+        if (userToUpdate?.is_owner && userToUpdate?.role?.name === 'admin' && currentStatus) {
+            toast.error('Cannot deactivate a company owner with admin role')
+            return
+        }
+        
+        setIsUpdatingStatus(true)
         setActionUserId(userId)
 
         try {
@@ -139,20 +164,26 @@ export function UsersTable() {
                     user.id === userId ? { ...user, is_active: !currentStatus } : user
                 ))
 
-                toast.success(`User ${currentStatus ? 'activated' : 'deactivated'} successfully`)
+                toast.success(`User ${!currentStatus ? 'activated' : 'deactivated'} successfully`)
             } else {
-                throw new Error(response.message || `Failed to ${currentStatus ? 'activate' : 'deactivate'} user`)
+                throw new Error(response.message || `Failed to ${!currentStatus ? 'activate' : 'deactivate'} user`)
             }
         } catch (error) {
-            toast.error(`Failed to ${currentStatus ? 'activate' : 'deactivate'} user`)
+            toast.error(error.message || `Failed to ${!currentStatus ? 'activate' : 'deactivate'} user`)
             console.error('Error updating status:', error)
         } finally {
-            setIsUpdating(false)
+            setIsUpdatingStatus(false)
             setActionUserId(null)
         }
     }
 
     const confirmDeleteUser = (user) => {
+        // Prevent deletion of company owners with admin role
+        if (user.is_owner && user.role?.name === 'admin') {
+            toast.error('Cannot delete a company owner with admin role')
+            return
+        }
+        
         setSelectedUser(user)
         setDeleteDialogOpen(true)
     }
@@ -310,25 +341,29 @@ export function UsersTable() {
                                     <div className="flex items-center space-x-2">
                                         <Checkbox
                                             id={`deactivate-${user.id}`}
-                                            checked={!user.is_active}
-                                            onCheckedChange={() => handleDeactivateToggle(user.id, !user.is_active)}
-                                            disabled={isUpdating && actionUserId === user.id}
+                                            checked={user.is_active}
+                                            onCheckedChange={() => handleDeactivateToggle(user.id, user.is_active)}
+                                            disabled={(isUpdatingStatus && actionUserId === user.id) || (user.is_owner && user.role?.name === 'admin')}
                                         />
                                         <label htmlFor={`deactivate-${user.id}`} className="text-sm">
-                                            {!user.is_active ? 'Deactivated' : 'Active'}
+                                            {user.is_active ? 'Active' : 'Deactivated'}
+                                            {user.is_owner && user.role?.name === 'admin' && user.is_active && (
+                                                <span className="ml-1 text-xs text-muted-foreground">(Company Owner)</span>
+                                            )}
                                         </label>
-                                        {isUpdating && actionUserId === user.id && (
+                                        {isUpdatingStatus && actionUserId === user.id && (
                                             <RotateCw className="h-3 w-3 animate-spin ml-1" />
                                         )}
                                     </div>
                                 </TableCell>
                                 <TableCell className="!text-right pr-4 flex justify-end">
+                                    {/* Show tooltip if user is the only admin */}
                                     <Button
                                         variant="ghost"
                                         size="sm"
                                         className="flex items-center gap-1 text-red-500 cursor-pointer"
                                         onClick={() => confirmDeleteUser(user)}
-                                        disabled={isUpdating}
+                                        disabled={isUpdating || (user.is_owner && user.role?.name === 'admin')}
                                     >
                                         <span className="text-xs font-medium whitespace-nowrap">DELETE USER</span>
                                         <Trash2 className="size-4" />

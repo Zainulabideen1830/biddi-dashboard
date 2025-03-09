@@ -125,14 +125,29 @@ export default function AuthGuard({
         // Check if user was invited
         const isInvitedUser = !!actualCurrentUser?.is_invited
         
-        // Re-check helper functions with the latest user data
-        // Company info is only required for admin users who weren't invited
-        const currentHasCompanyInfo = !!actualCurrentUser?.has_company_info || isInvitedUser
+        // Check if user has a role (null role means onboarding is incomplete)
+        const hasRole = !!actualCurrentUser?.role
         
-        // Subscription is only required for admin users who weren't invited
-        const currentHasActiveSubscription = isInvitedUser || 
-          (actualCurrentUser?.role.name !== 'admin') || 
-          (actualCurrentUser?.subscription_status === 'ACTIVE' || actualCurrentUser?.subscription_status === 'TRIAL')
+        // Check if user is an admin (only if they have a role)
+        const isAdmin = hasRole && actualCurrentUser.role.name === 'admin'
+        
+        // Check if user has company info
+        const hasCompanyInfo = !!actualCurrentUser?.has_company_info
+        
+        // Check if user has an active subscription
+        const hasActiveSubscription = 
+          actualCurrentUser?.subscription_status === 'ACTIVE' || 
+          actualCurrentUser?.subscription_status === 'TRIAL'
+        
+        // Determine if company info is required
+        // Company info is required for admin users who weren't invited
+        // For users with null roles, we assume they need company info if not invited
+        const needsCompanyInfo = !isInvitedUser && !hasCompanyInfo && (hasRole ? isAdmin : true)
+        
+        // Determine if subscription is required
+        // Subscription is required for admin users who weren't invited
+        // For users with null roles, we assume they need subscription if not invited and they have company info
+        const needsSubscription = !isInvitedUser && (hasRole ? isAdmin : hasCompanyInfo) && !hasActiveSubscription
         
         // Now apply the access rules
         
@@ -158,13 +173,15 @@ export default function AuthGuard({
           
           // Skip company info and payment steps for invited users
           if (!isInvitedUser) {
-            if (!currentHasCompanyInfo && actualCurrentUser?.role.name === 'admin') {
+            // If user needs company info, redirect to company info page
+            if (needsCompanyInfo) {
               console.log('[AuthGuard Rule 1] redirecting to company-info')
               router.replace('/auth/company-info')
               return
             }
             
-            if (!currentHasActiveSubscription && actualCurrentUser?.role.name === 'admin') {
+            // If user needs subscription, redirect to payment page
+            if (needsSubscription) {
               console.log('[AuthGuard Rule 1] redirecting to payment')
               router.replace('/auth/payment')
               return
@@ -177,17 +194,16 @@ export default function AuthGuard({
         }
         
         // Rule 2: If page requires company info but user doesn't have it
-        // Skip for invited users
-        if (requireCompanyInfo && !isInvitedUser && actualCurrentUser?.role.name === 'admin' && !currentHasCompanyInfo) {
+        if (requireCompanyInfo && needsCompanyInfo) {
           console.log('[AuthGuard Rule 2] redirecting to company-info')
           router.replace('/auth/company-info')
           return
         }
         
         // Rule 3: If page requires no company info but user has it
-        if (requireNoCompanyInfo && !isInvitedUser && actualCurrentUser?.role.name === 'admin' && currentHasCompanyInfo) {
-          // If they have company info but no subscription, go to payment
-          if (!currentHasActiveSubscription) {
+        if (requireNoCompanyInfo && !needsCompanyInfo) {
+          // If they have company info but need subscription, go to payment
+          if (needsSubscription) {
             console.log('[AuthGuard Rule 3] redirecting to payment')
             router.replace('/auth/payment')
             return
@@ -199,15 +215,14 @@ export default function AuthGuard({
         }
         
         // Rule 4: If page requires subscription but user doesn't have it
-        // Skip for invited users
-        if (requireSubscription && !isInvitedUser && actualCurrentUser?.role.name === 'admin' && !currentHasActiveSubscription) {
+        if (requireSubscription && needsSubscription) {
           console.log('[AuthGuard Rule 4] redirecting to payment')
           router.replace('/auth/payment')
           return
         }
         
         // Rule 5: If page requires no subscription but user has it
-        if (requireNoSubscription && currentHasActiveSubscription) {
+        if (requireNoSubscription && !needsSubscription && hasCompanyInfo) {
           router.replace('/dashboard')
           return
         }

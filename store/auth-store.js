@@ -17,11 +17,47 @@ const createAuthFetch = (originalFetch) => async (url, options = {}) => {
   const authStore = useAuthStore.getState()
   const accessToken = authStore.tokens?.accessToken
 
+  // Check if token is expired or about to expire before making the request
+  if (accessToken) {
+    try {
+      // Check if token is expired or about to expire (within 30 seconds)
+      const tokenData = JSON.parse(atob(accessToken.split('.')[1]))
+      const expiryTime = tokenData.exp * 1000 // Convert to milliseconds
+      const currentTime = Date.now()
+      const timeToExpiry = expiryTime - currentTime
+      
+      // If token is expired or about to expire (less than 30 seconds), refresh it
+      if (timeToExpiry < 30000) {
+        console.log('Token is about to expire, refreshing before request...')
+        
+        // If we're already refreshing, wait for that to complete
+        if (isRefreshingToken && refreshPromise) {
+          await refreshPromise
+        } else {
+          // Start a new refresh (silent=true to avoid UI disruption)
+          isRefreshingToken = true
+          refreshPromise = authStore.refreshToken(true)
+            .finally(() => {
+              isRefreshingToken = false
+              refreshPromise = null
+            })
+          
+          await refreshPromise
+        }
+      }
+    } catch (error) {
+      console.error('Error checking token expiry:', error)
+    }
+  }
+
   try {
+    // Get the latest access token (which might have been refreshed)
+    const currentAccessToken = useAuthStore.getState().tokens?.accessToken
+    
     // Try the original request with the token in the Authorization header
     const headers = {
       ...options.headers,
-      ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {})
+      ...(currentAccessToken ? { 'Authorization': `Bearer ${currentAccessToken}` } : {})
     }
 
     const response = await originalFetch(url, {
@@ -59,21 +95,15 @@ const createAuthFetch = (originalFetch) => async (url, options = {}) => {
           throw new Error('Authentication failed during refresh')
         }
       } else {
-        // Set refreshing state to true
-        authStore.setRefreshing(true)
-
-        // Start a new refresh
+        // Start a new refresh (silent=true to avoid UI disruption)
         isRefreshingToken = true
-        refreshPromise = authStore.refreshToken()
+        refreshPromise = authStore.refreshToken(true)
           .finally(() => {
             isRefreshingToken = false
             refreshPromise = null
           })
 
         const refreshSuccess = await refreshPromise
-
-        // Reset refreshing state
-        authStore.setRefreshing(false)
 
         // If refresh succeeded, retry the original request
         if (refreshSuccess) {
@@ -107,14 +137,49 @@ const createAuthFetch = (originalFetch) => async (url, options = {}) => {
 let authValidationTimer = null
 
 // Function to set up periodic validation
-const setupPeriodicValidation = (validateFn, interval = 5 * 60 * 1000) => {
+const setupPeriodicValidation = (validateFn, interval = 10 * 60 * 1000) => {
   // Clear any existing timer
   if (authValidationTimer) {
     clearInterval(authValidationTimer)
   }
   
-  // Set up new timer (default: check every 5 minutes)
-  authValidationTimer = setInterval(validateFn, interval)
+  // Immediately run a silent validation check
+  validateFn(true)
+  
+  // Set up new timer (default: check every 10 minutes)
+  authValidationTimer = setInterval(() => {
+    try {
+      // Get the current access token
+      const accessToken = useAuthStore.getState().tokens?.accessToken
+      
+      if (accessToken) {
+        // Check if token is expired or about to expire
+        try {
+          const tokenData = JSON.parse(atob(accessToken.split('.')[1]))
+          const expiryTime = tokenData.exp * 1000 // Convert to milliseconds
+          const currentTime = Date.now()
+          const timeToExpiry = expiryTime - currentTime
+          
+          // If token is expired or about to expire (less than 60 seconds), refresh it silently
+          if (timeToExpiry < 60000) {
+            console.log('Token is about to expire during periodic check, refreshing silently...')
+            useAuthStore.getState().refreshToken(true)
+          } else {
+            // Otherwise, just validate the auth state silently
+            validateFn(true)
+          }
+        } catch (error) {
+          console.error('Error checking token expiry during periodic validation:', error)
+          validateFn(true)
+        }
+      } else {
+        // No token, just run the validation function silently
+        validateFn(true)
+      }
+    } catch (error) {
+      console.error('Error in periodic validation:', error)
+    }
+  }, interval)
   
   // Return a cleanup function
   return () => {
@@ -168,15 +233,17 @@ export const useAuthStore = create(
       },
 
       // Token refresh function
-      refreshToken: async () => {
+      refreshToken: async (silent = true) => {
         try {
           // If refresh is already in progress, return the existing promise
           if (isRefreshingToken && refreshPromise) {
             return refreshPromise
           }
           
-          // Set refreshing state to true
-          set({ isRefreshing: true })
+          // Only set loading state if not a silent refresh
+          if (!silent) {
+            set({ isRefreshing: true })
+          }
           
           // Start a new refresh
           isRefreshingToken = true
@@ -190,7 +257,7 @@ export const useAuthStore = create(
               tokens: null,
               isAuthenticated: false,
               error: 'Session expired',
-              isRefreshing: false
+              isRefreshing: !silent && false
             });
             return false;
           }
@@ -213,7 +280,7 @@ export const useAuthStore = create(
               tokens: null,
               isAuthenticated: false,
               error: 'Session expired',
-              isRefreshing: false
+              isRefreshing: !silent && false
             });
             return false;
           }
@@ -244,7 +311,7 @@ export const useAuthStore = create(
               tokens: null,
               isAuthenticated: false,
               error: 'Session expired',
-              isRefreshing: false
+              isRefreshing: !silent && false
             });
             return false;
           }
@@ -254,12 +321,14 @@ export const useAuthStore = create(
             tokens: null,
             isAuthenticated: false,
             error: 'Session expired',
-            isRefreshing: false
+            isRefreshing: !silent && false
           });
           return false;
         } finally {
-          // Reset refreshing state
-          set({ isRefreshing: false })
+          // Reset refreshing state only if not a silent refresh
+          if (!silent) {
+            set({ isRefreshing: false })
+          }
           isRefreshingToken = false
           refreshPromise = null
         }
@@ -329,7 +398,7 @@ export const useAuthStore = create(
       setError: (error) => set({ error }),
 
       // Validate current authentication status
-      validateAuth: async (force = false) => {
+      validateAuth: async (force = false, silent = false) => {
         const lastValidated = get().lastValidated
         const now = new Date()
         
@@ -363,7 +432,7 @@ export const useAuthStore = create(
         
         // Start a new validation
         isValidatingAuth = true
-        validationPromise = get().checkAuth()
+        validationPromise = get().checkAuth(silent)
           .finally(() => {
             isValidatingAuth = false
             validationPromise = null
@@ -373,14 +442,17 @@ export const useAuthStore = create(
       },
 
       // Check if the current authentication is valid
-      checkAuth: async () => {
+      checkAuth: async (silent = false) => {
         try {
           // If validation is already in progress, return the existing promise
           if (isValidatingAuth && validationPromise && validationPromise !== true && validationPromise !== false) {
             return validationPromise
           }
           
-          set({ isLoading: true, error: null })
+          // Only set loading state if not silent
+          if (!silent) {
+            set({ isLoading: true, error: null })
+          }
           
           // Start a new validation
           isValidatingAuth = true
@@ -392,7 +464,7 @@ export const useAuthStore = create(
               tokens: null,
               isAuthenticated: false,
               error: 'No access token available',
-              isLoading: false
+              isLoading: !silent && false
             });
             return false;
           }
@@ -426,8 +498,8 @@ export const useAuthStore = create(
               return refreshSucceeded
             }
 
-            // Otherwise, try to refresh the token
-            return await get().refreshToken()
+            // Otherwise, try to refresh the token silently
+            return await get().refreshToken(true)
           }
 
           // If we get here, authentication failed
@@ -435,18 +507,21 @@ export const useAuthStore = create(
             tokens: null,
             isAuthenticated: false,
             error: 'Authentication failed',
-            isLoading: false
+            isLoading: !silent && false
           });
           return false
         } catch (error) {
           console.error('Check auth error:', error)
           set({
             error: error.message,
-            isLoading: false
+            isLoading: !silent && false
           });
           return false
         } finally {
-          set({ isLoading: false })
+          // Only reset loading state if not silent
+          if (!silent) {
+            set({ isLoading: false })
+          }
           isValidatingAuth = false
           validationPromise = null
         }
@@ -488,16 +563,48 @@ export const useAuthStore = create(
       onRehydrateStorage: () => (state) => {
         // When the store is rehydrated from localStorage, validate the auth state
         if (state && state.isAuthenticated) {
+          // Check if token is expired immediately
+          const accessToken = state.tokens?.accessToken
+          
+          if (accessToken) {
+            try {
+              // Check if token is expired or about to expire
+              const tokenData = JSON.parse(atob(accessToken.split('.')[1]))
+              const expiryTime = tokenData.exp * 1000 // Convert to milliseconds
+              const currentTime = Date.now()
+              const timeToExpiry = expiryTime - currentTime
+              
+              // If token is expired, clear auth state
+              if (timeToExpiry <= 0) {
+                console.log('Token is expired on rehydration, clearing auth state')
+                state.clearAuth()
+                return
+              }
+              
+              // If token is about to expire (less than 60 seconds), refresh it silently
+              if (timeToExpiry < 60000) {
+                console.log('Token is about to expire on rehydration, refreshing silently...')
+                // Schedule refresh to run after rehydration is complete
+                setTimeout(() => {
+                  state.refreshToken(true)
+                }, 0)
+              }
+            } catch (error) {
+              console.error('Error checking token expiry on rehydration:', error)
+            }
+          }
+          
           // Schedule validation to run after rehydration is complete
           setTimeout(() => {
             // Use a flag to prevent duplicate validations during initial load
             if (!isValidatingAuth) {
-              state.validateAuth(true)
+              // Validate silently to avoid UI disruption
+              state.validateAuth(true, true)
               
-              // Set up periodic validation
-              setupPeriodicValidation(() => {
-                state.validateAuth()
-              })
+              // Set up periodic validation with a longer interval (10 minutes)
+              setupPeriodicValidation((force) => {
+                state.validateAuth(force, true)
+              }, 10 * 60 * 1000)
             }
           }, 0)
         }
