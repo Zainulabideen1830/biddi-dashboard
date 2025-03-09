@@ -51,7 +51,7 @@ export function InvitationsTable() {
                 throw new Error(response.message || 'Failed to fetch invitations')
             }
         } catch (error) {
-            toast.error('Failed to load invitations. Please try again.')
+            toast.error(error.message || 'Failed to load invitations. Please try again.')
             console.error('Error fetching invitations:', error)
         } finally {
             setIsLoading(false)

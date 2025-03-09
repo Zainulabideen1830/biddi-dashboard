@@ -176,7 +176,7 @@ export function RolePermissions({ role, onClose }) {
     } catch (error) {
       console.error('Failed to update permissions:', error)
       setServerError(error.message || 'Failed to update permissions. Please try again.')
-      toast.error('Failed to update permissions. Please try again.')
+      toast.error(error.message || 'Failed to update permissions. Please try again.')
     } finally {
       setIsSaving(false)
     }

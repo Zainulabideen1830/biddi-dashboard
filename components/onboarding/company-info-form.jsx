@@ -20,6 +20,7 @@ import { toast } from "react-toastify"
 import { useAuthStore } from "@/store/auth-store"
 import Loader from "../shared/loader"
 import { useApi } from "@/lib/api"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 const FormSchema = z.object({
     businessName: z.string().min(1, {
@@ -63,12 +64,30 @@ const CompanyInfoForm = () => {
         },
     })
     const [isLoading, setIsLoading] = useState(false)
+    const [isProcessing, setIsProcessing] = useState(false)
+    const [processingTime, setProcessingTime] = useState(0)
 
     async function onSubmit(data) {
         try {
             setIsLoading(true)
+            setIsProcessing(true)
+            
+            // Start a timer to track processing time
+            const startTime = Date.now()
+            const processingTimer = setInterval(() => {
+                const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000)
+                setProcessingTime(elapsedSeconds)
+                
+                // After 3 seconds, show the processing message
+                if (elapsedSeconds >= 3 && !isProcessing) {
+                    setIsProcessing(true)
+                }
+            }, 1000)
 
             const result = await api.post('/api/auth/company-info', data);
+            
+            // Clear the timer
+            clearInterval(processingTimer)
 
             // Update the user state with the updated user data
             if (result.success) {
@@ -80,11 +99,12 @@ const CompanyInfoForm = () => {
                 toast.error(result.message || 'Something went wrong')
             }
 
-
         } catch (error) {
             toast.error(error.message || 'Something went wrong')
         } finally {
             setIsLoading(false)
+            setIsProcessing(false)
+            setProcessingTime(0)
         }
     }
 
@@ -121,9 +141,18 @@ const CompanyInfoForm = () => {
                         </FormItem>
                     )}
                 />
+                
+                {isProcessing && processingTime >= 3 && (
+                    <Alert className="bg-blue-50 border-blue-200">
+                        <AlertDescription className="text-blue-700">
+                            Setting up your company account. This may take a few moments as we configure your permissions and roles...
+                        </AlertDescription>
+                    </Alert>
+                )}
+                
                 <Button type="submit" className="w-full flex items-center gap-2" disabled={isLoading}>
                     {isLoading && <Loader2 className="animate-spin" />}
-                    Next
+                    {isLoading ? 'Setting up your account...' : 'Next'}
                 </Button>
             </form>
         </Form>

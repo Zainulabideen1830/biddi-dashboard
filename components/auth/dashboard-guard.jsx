@@ -13,7 +13,11 @@ import AuthGuard from './auth-guard'
  * 
  * Note: Users who joined via invitation already have company info and don't need to complete onboarding.
  * The is_invited field is used to identify these users and exempt them from company info and subscription requirements.
+ * 
+ * This component is a simple wrapper around AuthGuard with the appropriate props.
+ * All access control logic is handled by AuthGuard.
  */
+
 export default function DashboardGuard({ children }) {
     return (
         <AuthGuard 
