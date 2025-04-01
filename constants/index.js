@@ -33,7 +33,7 @@ export const navLinks = [
             },
             {
                 title: "Products & Services",
-                url: "#",
+                url: "/dashboard/biddi/products-services",
             },
             {
                 title: "Rules",

@@ -1,0 +1,92 @@
+[
+    {
+        "name": "4'' Pothole",
+        "measurement": "1 units",
+        "material_cost": 4.30,
+        "man_hours": 0,
+        "machine_hours": 0,
+        "date_last_updated": "01/02/2023",
+        "updated_by": "John Doe"
+    },
+    {
+        "name": "Crack Sealing",
+        "measurement": "100 linear ft",
+        "material_cost": 2.75,
+        "man_hours": 2,
+        "machine_hours": 1,
+        "date_last_updated": "03/15/2024",
+        "updated_by": "Sarah Smith"
+    },
+    {
+        "name": "Asphalt Overlay",
+        "measurement": "1000 sq ft",
+        "material_cost": 12.50,
+        "man_hours": 8,
+        "machine_hours": 4,
+        "date_last_updated": "02/28/2024",
+        "updated_by": "Mike Johnson"
+    },
+    {
+        "name": "Concrete Sidewalk",
+        "measurement": "100 sq ft",
+        "material_cost": 8.90,
+        "man_hours": 6,
+        "machine_hours": 2,
+        "date_last_updated": "03/01/2024",
+        "updated_by": "Emily Brown"
+    },
+    {
+        "name": "Road Marking",
+        "measurement": "500 linear ft",
+        "material_cost": 1.50,
+        "man_hours": 3,
+        "machine_hours": 1,
+        "date_last_updated": "03/10/2024",
+        "updated_by": "Tom Wilson"
+    },
+    {
+        "name": "Storm Drain Cleaning",
+        "measurement": "1 unit",
+        "material_cost": 0.00,
+        "man_hours": 4,
+        "machine_hours": 2,
+        "date_last_updated": "03/05/2024",
+        "updated_by": "David Lee"
+    },
+    {
+        "name": "Speed Bump Installation",
+        "measurement": "1 unit",
+        "material_cost": 350.00,
+        "man_hours": 5,
+        "machine_hours": 3,
+        "date_last_updated": "02/20/2024",
+        "updated_by": "Lisa Chen"
+    },
+    {
+        "name": "Guardrail Repair",
+        "measurement": "50 linear ft",
+        "material_cost": 45.75,
+        "man_hours": 6,
+        "machine_hours": 2,
+        "date_last_updated": "03/12/2024",
+        "updated_by": "Robert Taylor"
+    },
+    {
+        "name": "Street Sign Installation",
+        "measurement": "1 unit",
+        "material_cost": 125.00,
+        "man_hours": 2,
+        "machine_hours": 1,
+        "date_last_updated": "03/08/2024",
+        "updated_by": "Amanda Garcia"
+    },
+    {
+        "name": "Curb Replacement",
+        "measurement": "20 linear ft",
+        "material_cost": 28.90,
+        "man_hours": 4,
+        "machine_hours": 2,
+        "date_last_updated": "03/14/2024",
+        "updated_by": "James Martinez"
+    }
+]
